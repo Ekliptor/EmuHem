@@ -293,35 +293,170 @@ static inline uint32_t __get_PSP() { return 0; }
 static inline void __set_PSP(uint32_t) {}
 #define __asm__(x)
 
-// DSP intrinsics from utility_m4.hpp
-static inline int32_t __SXTB16(int32_t v) {
-    int16_t lo = static_cast<int8_t>(v & 0xFF);
-    int16_t hi = static_cast<int8_t>((v >> 16) & 0xFF);
-    return (static_cast<uint32_t>(static_cast<uint16_t>(hi)) << 16) | static_cast<uint16_t>(lo);
+// DSP intrinsics (ARM Cortex-M4 DSP extensions, emulated in plain C++).
+// Semantics mirror the instructions in ARM ARMv7-M Architecture Reference Manual.
+// All arguments are treated as unsigned 32-bit words; signedness is applied
+// per-field where the instruction demands it.
+
+static inline uint32_t __ror32(uint32_t v, uint32_t r) {
+    r &= 31;
+    return r == 0 ? v : ((v >> r) | (v << (32 - r)));
 }
 
-static inline int32_t __SMUAD(int32_t a, int32_t b) {
-    int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
-    int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
-    int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
-    int16_t b_hi = static_cast<int16_t>((b >> 16) & 0xFFFF);
+static inline int32_t __SXTB16(uint32_t rm, uint32_t ror) {
+    const uint32_t v = __ror32(rm, ror);
+    const int16_t lo = static_cast<int8_t>(v & 0xFF);
+    const int16_t hi = static_cast<int8_t>((v >> 16) & 0xFF);
+    return (static_cast<uint32_t>(static_cast<uint16_t>(hi)) << 16)
+         | static_cast<uint16_t>(lo);
+}
+
+static inline int32_t __SXTH(uint32_t rm, uint32_t ror) {
+    const uint32_t v = __ror32(rm, ror);
+    return static_cast<int16_t>(v & 0xFFFF);
+}
+
+static inline int32_t __SXTAH(int32_t rn, uint32_t rm, uint32_t ror) {
+    return rn + __SXTH(rm, ror);
+}
+
+static inline int32_t __SMUAD(uint32_t a, uint32_t b) {
+    const int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
+    const int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
+    const int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
+    const int16_t b_hi = static_cast<int16_t>((b >> 16) & 0xFFFF);
     return (a_lo * b_lo) + (a_hi * b_hi);
 }
 
-static inline int32_t __SMLAD(int32_t a, int32_t b, int32_t acc) {
+static inline int32_t __SMLAD(uint32_t a, uint32_t b, int32_t acc) {
     return __SMUAD(a, b) + acc;
 }
 
-static inline int32_t __SMLATB(int32_t a, int32_t b, int32_t acc) {
-    int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
-    int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
-    return (a_hi * b_lo) + acc;
+static inline int32_t __SMUADX(uint32_t a, uint32_t b) {
+    const int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
+    const int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
+    const int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
+    const int16_t b_hi = static_cast<int16_t>((b >> 16) & 0xFFFF);
+    return (a_lo * b_hi) + (a_hi * b_lo);
 }
 
-static inline int32_t __SMLABB(int32_t a, int32_t b, int32_t acc) {
-    int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
-    int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
-    return (a_lo * b_lo) + acc;
+static inline int32_t __SMLADX(uint32_t a, uint32_t b, int32_t acc) {
+    return __SMUADX(a, b) + acc;
+}
+
+static inline int32_t __SMUSD(uint32_t a, uint32_t b) {
+    const int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
+    const int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
+    const int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
+    const int16_t b_hi = static_cast<int16_t>((b >> 16) & 0xFFFF);
+    return (a_lo * b_lo) - (a_hi * b_hi);
+}
+
+static inline int32_t __SMUSDX(uint32_t a, uint32_t b) {
+    const int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
+    const int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
+    const int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
+    const int16_t b_hi = static_cast<int16_t>((b >> 16) & 0xFFFF);
+    return (a_lo * b_hi) - (a_hi * b_lo);
+}
+
+static inline int32_t __SMLSD(uint32_t a, uint32_t b, int32_t acc) {
+    return __SMUSD(a, b) + acc;
+}
+
+static inline int64_t __SMLALD(uint32_t a, uint32_t b, int64_t acc) {
+    const int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
+    const int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
+    const int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
+    const int16_t b_hi = static_cast<int16_t>((b >> 16) & 0xFFFF);
+    return acc + static_cast<int64_t>(a_lo) * b_lo
+               + static_cast<int64_t>(a_hi) * b_hi;
+}
+
+static inline int64_t __SMLALDX(uint32_t a, uint32_t b, int64_t acc) {
+    const int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
+    const int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
+    const int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
+    const int16_t b_hi = static_cast<int16_t>((b >> 16) & 0xFFFF);
+    return acc + static_cast<int64_t>(a_lo) * b_hi
+               + static_cast<int64_t>(a_hi) * b_lo;
+}
+
+static inline int64_t __SMLSLD(uint32_t a, uint32_t b, int64_t acc) {
+    const int16_t a_lo = static_cast<int16_t>(a & 0xFFFF);
+    const int16_t a_hi = static_cast<int16_t>((a >> 16) & 0xFFFF);
+    const int16_t b_lo = static_cast<int16_t>(b & 0xFFFF);
+    const int16_t b_hi = static_cast<int16_t>((b >> 16) & 0xFFFF);
+    return acc + static_cast<int64_t>(a_lo) * b_lo
+               - static_cast<int64_t>(a_hi) * b_hi;
+}
+
+static inline int32_t __SMULBB(uint32_t a, uint32_t b) {
+    return static_cast<int16_t>(a & 0xFFFF) * static_cast<int16_t>(b & 0xFFFF);
+}
+static inline int32_t __SMULBT(uint32_t a, uint32_t b) {
+    return static_cast<int16_t>(a & 0xFFFF) * static_cast<int16_t>((b >> 16) & 0xFFFF);
+}
+static inline int32_t __SMULTB(uint32_t a, uint32_t b) {
+    return static_cast<int16_t>((a >> 16) & 0xFFFF) * static_cast<int16_t>(b & 0xFFFF);
+}
+static inline int32_t __SMULTT(uint32_t a, uint32_t b) {
+    return static_cast<int16_t>((a >> 16) & 0xFFFF) * static_cast<int16_t>((b >> 16) & 0xFFFF);
+}
+
+static inline int32_t __SMLATB(uint32_t a, uint32_t b, int32_t acc) {
+    return __SMULTB(a, b) + acc;
+}
+
+static inline int32_t __SMLABB(uint32_t a, uint32_t b, int32_t acc) {
+    return __SMULBB(a, b) + acc;
+}
+
+static inline int32_t __SMLABT(uint32_t a, uint32_t b, int32_t acc) {
+    return __SMULBT(a, b) + acc;
+}
+
+static inline int32_t __SMLATT(uint32_t a, uint32_t b, int32_t acc) {
+    return __SMULTT(a, b) + acc;
+}
+
+static inline int32_t __SMMULR(int32_t a, int32_t b) {
+    const int64_t full = static_cast<int64_t>(a) * b;
+    return static_cast<int32_t>((full + 0x80000000LL) >> 32);
+}
+
+static inline int32_t __sat32(int64_t v) {
+    if (v > INT32_MAX) return INT32_MAX;
+    if (v < INT32_MIN) return INT32_MIN;
+    return static_cast<int32_t>(v);
+}
+
+static inline int32_t __QADD(int32_t a, int32_t b) {
+    return __sat32(static_cast<int64_t>(a) + b);
+}
+
+static inline int32_t __QSUB(int32_t a, int32_t b) {
+    return __sat32(static_cast<int64_t>(a) - b);
+}
+
+static inline int16_t __sat16(int32_t v) {
+    if (v > 32767) return 32767;
+    if (v < -32768) return -32768;
+    return static_cast<int16_t>(v);
+}
+
+static inline uint32_t __QADD16(uint32_t a, uint32_t b) {
+    const int16_t r_lo = __sat16(static_cast<int16_t>(a & 0xFFFF) + static_cast<int16_t>(b & 0xFFFF));
+    const int16_t r_hi = __sat16(static_cast<int16_t>((a >> 16) & 0xFFFF) + static_cast<int16_t>((b >> 16) & 0xFFFF));
+    return (static_cast<uint32_t>(static_cast<uint16_t>(r_hi)) << 16)
+         | static_cast<uint16_t>(r_lo);
+}
+
+static inline uint32_t __QSUB16(uint32_t a, uint32_t b) {
+    const int16_t r_lo = __sat16(static_cast<int16_t>(a & 0xFFFF) - static_cast<int16_t>(b & 0xFFFF));
+    const int16_t r_hi = __sat16(static_cast<int16_t>((a >> 16) & 0xFFFF) - static_cast<int16_t>((b >> 16) & 0xFFFF));
+    return (static_cast<uint32_t>(static_cast<uint16_t>(r_hi)) << 16)
+         | static_cast<uint16_t>(r_lo);
 }
 
 static inline uint32_t __PKHBT(uint32_t a, uint32_t b, uint32_t shift) {
@@ -330,6 +465,11 @@ static inline uint32_t __PKHBT(uint32_t a, uint32_t b, uint32_t shift) {
 
 static inline uint32_t __PKHTB(uint32_t a, uint32_t b, uint32_t shift) {
     return (a & 0xFFFF0000) | (((b >> shift) & 0xFFFF));
+}
+
+static inline uint32_t __BFI(uint32_t rd, uint32_t rn, uint32_t lsb, uint32_t width) {
+    const uint32_t mask = width >= 32 ? 0xFFFFFFFFu : ((1u << width) - 1u);
+    return (rd & ~(mask << lsb)) | ((rn & mask) << lsb);
 }
 
 static inline int32_t __SSAT(int32_t val, uint32_t sat) {
@@ -365,13 +505,16 @@ static inline uint32_t __REV(uint32_t val) {
     return __builtin_bswap32(val);
 }
 
-static inline uint16_t __REV16(uint16_t val) {
-    return __builtin_bswap16(val);
+static inline uint32_t __REV16(uint32_t val) {
+    // ARM rev16: reverse byte order within each halfword of a 32-bit word.
+    return ((val & 0xFF00FF00u) >> 8) | ((val & 0x00FF00FFu) << 8);
 }
 
-// SIMD pointer access macro (used by DSP code to read packed 16-bit I/Q pairs)
+// SIMD pointer access macro (used by DSP code to read packed 16-bit I/Q pairs).
+// Uses a C-style cast so the macro also works when `addr` is declared as
+// `const void*` (dsp_decimate uses this pattern when iterating read-only buffers).
 #define __SIMD32_TYPE int32_t
-#define __SIMD32(addr) (*(reinterpret_cast<__SIMD32_TYPE**>(&(addr))))
+#define __SIMD32(addr) (*(__SIMD32_TYPE**)&(addr))
 
 #endif // !__arm__
 

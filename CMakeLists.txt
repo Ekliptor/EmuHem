@@ -155,6 +155,81 @@ string(REPLACE
     _PWBS "${_PWBS}")
 file(WRITE ${PATCHED_FW_DIR}/proc_wideband_spectrum.cpp "${_PWBS}")
 
+# ---------------------------------------------------------------------------
+# Phase 3.5: Audio processor patches
+# Drop M4-only guard from simd.hpp/utility_m4.hpp so the DSP helpers compile
+# in the unified binary. Strip main() from the three audio processor .cpp
+# files (they conflict with main_emu.cpp).
+# ---------------------------------------------------------------------------
+
+# simd.hpp: drop LPC43XX_M4 guard (ARM intrinsics are stubbed in lpc43xx_cpp.hpp)
+file(READ ${FW_DIR}/common/simd.hpp _SIMD_C)
+string(REPLACE "#if defined(LPC43XX_M4)" "#if 1  // EmuHem: always compile" _SIMD_C "${_SIMD_C}")
+file(WRITE ${PATCHED_FW_DIR}/simd.hpp "${_SIMD_C}")
+file(COPY_FILE ${PATCHED_FW_DIR}/simd.hpp ${FW_DIR}/common/simd.hpp ONLY_IF_DIFFERENT)
+
+# utility_m4.hpp: drop LPC43XX_M4 guard
+file(READ ${FW_DIR}/common/utility_m4.hpp _UM4_C)
+string(REPLACE "#if defined(LPC43XX_M4)" "#if 1  // EmuHem: always compile" _UM4_C "${_UM4_C}")
+file(WRITE ${PATCHED_FW_DIR}/utility_m4.hpp "${_UM4_C}")
+file(COPY_FILE ${PATCHED_FW_DIR}/utility_m4.hpp ${FW_DIR}/common/utility_m4.hpp ONLY_IF_DIFFERENT)
+
+# proc_am_audio.cpp: Remove main() and demote constexpr locals that touch
+# instance-member static constexpr values (Clang is stricter than GCC here).
+file(READ ${FW_DIR}/baseband/proc_am_audio.cpp _PAM)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<NarrowbandAMAudio>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PAM "${_PAM}")
+string(REPLACE "constexpr size_t " "const size_t " _PAM "${_PAM}")
+file(WRITE ${PATCHED_FW_DIR}/proc_am_audio.cpp "${_PAM}")
+
+# proc_nfm_audio.cpp: Remove main() and demote constexpr locals
+file(READ ${FW_DIR}/baseband/proc_nfm_audio.cpp _PNFM)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<NarrowbandFMAudio>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PNFM "${_PNFM}")
+string(REPLACE "constexpr size_t " "const size_t " _PNFM "${_PNFM}")
+file(WRITE ${PATCHED_FW_DIR}/proc_nfm_audio.cpp "${_PNFM}")
+
+# proc_wfm_audio.cpp: Remove main() and demote constexpr locals
+file(READ ${FW_DIR}/baseband/proc_wfm_audio.cpp _PWFM)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<WidebandFMAudio>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PWFM "${_PWFM}")
+string(REPLACE "constexpr size_t " "const size_t " _PWFM "${_PWFM}")
+file(WRITE ${PATCHED_FW_DIR}/proc_wfm_audio.cpp "${_PWFM}")
+
+# audio_compressor.hpp: libc++ treats std::pow/log10/exp as non-constexpr.
+# Swap those static constexpr floats to inline const, and make tau_alpha
+# non-constexpr. The call sites only need runtime init.
+file(READ ${FW_DIR}/baseband/audio_compressor.hpp _ACMP)
+string(REPLACE
+    "static constexpr float lin_floor = std::pow(10.0f, db_floor / 20.0f);"
+    "static inline const float lin_floor = std::pow(10.0f, db_floor / 20.0f);"
+    _ACMP "${_ACMP}")
+string(REPLACE
+    "static constexpr float log2_db_k = 20.0f * std::log10(2.0f);"
+    "static inline const float log2_db_k = 20.0f * std::log10(2.0f);"
+    _ACMP "${_ACMP}")
+string(REPLACE
+    "    static constexpr float tau_alpha(const float tau, const float fs) {"
+    "    static float tau_alpha(const float tau, const float fs) {"
+    _ACMP "${_ACMP}")
+file(WRITE ${PATCHED_FW_DIR}/audio_compressor.hpp "${_ACMP}")
+file(COPY_FILE ${PATCHED_FW_DIR}/audio_compressor.hpp ${FW_DIR}/baseband/audio_compressor.hpp ONLY_IF_DIFFERENT)
+
+# audio_compressor.cpp: constexpr makeup_gain uses std::pow (not constexpr on libc++)
+file(READ ${FW_DIR}/baseband/audio_compressor.cpp _ACMPC)
+string(REPLACE
+    "    constexpr float makeup_gain = std::pow(10.0f, (threshold - (threshold / ratio)) / -20.0f);"
+    "    const float makeup_gain = std::pow(10.0f, (threshold - (threshold / ratio)) / -20.0f);"
+    _ACMPC "${_ACMPC}")
+file(WRITE ${PATCHED_FW_DIR}/audio_compressor.cpp "${_ACMPC}")
+file(COPY_FILE ${PATCHED_FW_DIR}/audio_compressor.cpp ${FW_DIR}/baseband/audio_compressor.cpp ONLY_IF_DIFFERENT)
+
 # event_m4.hpp: NOT copied in-place. Patched files in PATCHED_FW_DIR include it
 # from their same directory. Other code uses PATCHED_FW_DIR via -I path.
 
@@ -218,6 +293,9 @@ set(EMU_SOURCES
     ${EMU_PLATFORM_DIR}/portapack_shim/baseband_dma_emu.cpp
     ${EMU_PLATFORM_DIR}/portapack_shim/baseband_hw_emu.cpp
 
+    # Phase 5: I/Q source (file + noise)
+    ${EMU_PLATFORM_DIR}/portapack_shim/iq_source.cpp
+
     # Phase 3: Baseband firmware sources (patched)
     ${FW_DIR}/baseband/baseband_processor.cpp
     ${FW_DIR}/baseband/baseband_thread.cpp
@@ -225,6 +303,19 @@ set(EMU_SOURCES
     ${PATCHED_FW_DIR}/event_m4.cpp
     ${PATCHED_FW_DIR}/spectrum_collector.cpp
     ${PATCHED_FW_DIR}/proc_wideband_spectrum.cpp
+
+    # Phase 3.5: Audio baseband DSP + processors
+    ${FW_DIR}/baseband/dsp_decimate.cpp
+    ${FW_DIR}/baseband/dsp_demodulate.cpp
+    ${FW_DIR}/baseband/dsp_hilbert.cpp
+    ${FW_DIR}/baseband/dsp_modulate.cpp
+    ${FW_DIR}/common/dsp_iir.cpp
+    ${FW_DIR}/baseband/audio_output.cpp
+    ${FW_DIR}/baseband/audio_compressor.cpp
+    ${FW_DIR}/baseband/audio_stats_collector.cpp
+    ${PATCHED_FW_DIR}/proc_am_audio.cpp
+    ${PATCHED_FW_DIR}/proc_nfm_audio.cpp
+    ${PATCHED_FW_DIR}/proc_wfm_audio.cpp
 
     # Firmware sources: common layer (compiled as-is)
     ${FW_DIR}/common/lcd_ili9341.cpp
@@ -332,7 +423,7 @@ list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "cpld_max5\\.cpp$")
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "cpld_xilinx\\.cpp$")
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "i2c_pp\\.cpp$")
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "spi_pp\\.cpp$")
-list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "dsp_.*\\.cpp$")  # DSP is for baseband
+list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "dsp_.*\\.cpp$")  # DSP is for baseband -- added explicitly in Phase 3.5
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "baseband_sgpio\\.cpp$")
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "baseband_dma\\.cpp$")
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "audio_dma\\.cpp$")
@@ -356,6 +447,16 @@ list(APPEND EMU_SOURCES ${FW_APP_SOURCES}
 add_executable(emuhem ${EMU_SOURCES})
 
 target_include_directories(emuhem PRIVATE ${EMU_INCLUDE_DIRS})
+
+# Phase 3.5: Scope PRALINE define to just the AM/NFM audio processor TUs.
+# Their headers use PRALINE to select the Phase-2 manual-thread-start pattern
+# (auto_start=false + explicit .start() in the ctor body). WidebandFMAudio has
+# no PRALINE guard and auto-starts its threads like WidebandSpectrum.
+set_source_files_properties(
+    ${PATCHED_FW_DIR}/proc_am_audio.cpp
+    ${PATCHED_FW_DIR}/proc_nfm_audio.cpp
+    PROPERTIES COMPILE_DEFINITIONS "PRALINE"
+)
 
 # ---------------------------------------------------------------------------
 # Link libraries

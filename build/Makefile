@@ -4665,6 +4665,78 @@ mayhem-firmware/firmware/application/view_factory_base.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/application/view_factory_base.cpp.s
 .PHONY : mayhem-firmware/firmware/application/view_factory_base.cpp.s
 
+mayhem-firmware/firmware/baseband/audio_compressor.o: mayhem-firmware/firmware/baseband/audio_compressor.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/audio_compressor.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/audio_compressor.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_compressor.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/audio_compressor.cpp.o
+
+mayhem-firmware/firmware/baseband/audio_compressor.i: mayhem-firmware/firmware/baseband/audio_compressor.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/audio_compressor.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/audio_compressor.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_compressor.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/audio_compressor.cpp.i
+
+mayhem-firmware/firmware/baseband/audio_compressor.s: mayhem-firmware/firmware/baseband/audio_compressor.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/audio_compressor.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/audio_compressor.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_compressor.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/audio_compressor.cpp.s
+
+mayhem-firmware/firmware/baseband/audio_output.o: mayhem-firmware/firmware/baseband/audio_output.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/audio_output.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/audio_output.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_output.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/audio_output.cpp.o
+
+mayhem-firmware/firmware/baseband/audio_output.i: mayhem-firmware/firmware/baseband/audio_output.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/audio_output.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/audio_output.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_output.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/audio_output.cpp.i
+
+mayhem-firmware/firmware/baseband/audio_output.s: mayhem-firmware/firmware/baseband/audio_output.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/audio_output.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/audio_output.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_output.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/audio_output.cpp.s
+
+mayhem-firmware/firmware/baseband/audio_stats_collector.o: mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/audio_stats_collector.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.o
+
+mayhem-firmware/firmware/baseband/audio_stats_collector.i: mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/audio_stats_collector.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.i
+
+mayhem-firmware/firmware/baseband/audio_stats_collector.s: mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/audio_stats_collector.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/audio_stats_collector.cpp.s
+
 mayhem-firmware/firmware/baseband/baseband_processor.o: mayhem-firmware/firmware/baseband/baseband_processor.cpp.o
 .PHONY : mayhem-firmware/firmware/baseband/baseband_processor.o
 
@@ -4712,6 +4784,102 @@ mayhem-firmware/firmware/baseband/baseband_thread.s: mayhem-firmware/firmware/ba
 mayhem-firmware/firmware/baseband/baseband_thread.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/baseband_thread.cpp.s
 .PHONY : mayhem-firmware/firmware/baseband/baseband_thread.cpp.s
+
+mayhem-firmware/firmware/baseband/dsp_decimate.o: mayhem-firmware/firmware/baseband/dsp_decimate.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/dsp_decimate.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/dsp_decimate.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_decimate.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/dsp_decimate.cpp.o
+
+mayhem-firmware/firmware/baseband/dsp_decimate.i: mayhem-firmware/firmware/baseband/dsp_decimate.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/dsp_decimate.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/dsp_decimate.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_decimate.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/dsp_decimate.cpp.i
+
+mayhem-firmware/firmware/baseband/dsp_decimate.s: mayhem-firmware/firmware/baseband/dsp_decimate.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/dsp_decimate.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/dsp_decimate.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_decimate.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/dsp_decimate.cpp.s
+
+mayhem-firmware/firmware/baseband/dsp_demodulate.o: mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/dsp_demodulate.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.o
+
+mayhem-firmware/firmware/baseband/dsp_demodulate.i: mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/dsp_demodulate.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.i
+
+mayhem-firmware/firmware/baseband/dsp_demodulate.s: mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/dsp_demodulate.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/dsp_demodulate.cpp.s
+
+mayhem-firmware/firmware/baseband/dsp_hilbert.o: mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/dsp_hilbert.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.o
+
+mayhem-firmware/firmware/baseband/dsp_hilbert.i: mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/dsp_hilbert.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.i
+
+mayhem-firmware/firmware/baseband/dsp_hilbert.s: mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/dsp_hilbert.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/dsp_hilbert.cpp.s
+
+mayhem-firmware/firmware/baseband/dsp_modulate.o: mayhem-firmware/firmware/baseband/dsp_modulate.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/dsp_modulate.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/dsp_modulate.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_modulate.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/dsp_modulate.cpp.o
+
+mayhem-firmware/firmware/baseband/dsp_modulate.i: mayhem-firmware/firmware/baseband/dsp_modulate.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/dsp_modulate.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/dsp_modulate.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_modulate.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/dsp_modulate.cpp.i
+
+mayhem-firmware/firmware/baseband/dsp_modulate.s: mayhem-firmware/firmware/baseband/dsp_modulate.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/dsp_modulate.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/dsp_modulate.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_modulate.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/dsp_modulate.cpp.s
 
 mayhem-firmware/firmware/baseband/rssi_thread.o: mayhem-firmware/firmware/baseband/rssi_thread.cpp.o
 .PHONY : mayhem-firmware/firmware/baseband/rssi_thread.o
@@ -5048,6 +5216,30 @@ mayhem-firmware/firmware/common/chibios_cpp.s: mayhem-firmware/firmware/common/c
 mayhem-firmware/firmware/common/chibios_cpp.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/common/chibios_cpp.cpp.s
 .PHONY : mayhem-firmware/firmware/common/chibios_cpp.cpp.s
+
+mayhem-firmware/firmware/common/dsp_iir.o: mayhem-firmware/firmware/common/dsp_iir.cpp.o
+.PHONY : mayhem-firmware/firmware/common/dsp_iir.o
+
+# target to build an object file
+mayhem-firmware/firmware/common/dsp_iir.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/common/dsp_iir.cpp.o
+.PHONY : mayhem-firmware/firmware/common/dsp_iir.cpp.o
+
+mayhem-firmware/firmware/common/dsp_iir.i: mayhem-firmware/firmware/common/dsp_iir.cpp.i
+.PHONY : mayhem-firmware/firmware/common/dsp_iir.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/common/dsp_iir.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/common/dsp_iir.cpp.i
+.PHONY : mayhem-firmware/firmware/common/dsp_iir.cpp.i
+
+mayhem-firmware/firmware/common/dsp_iir.s: mayhem-firmware/firmware/common/dsp_iir.cpp.s
+.PHONY : mayhem-firmware/firmware/common/dsp_iir.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/common/dsp_iir.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/common/dsp_iir.cpp.s
+.PHONY : mayhem-firmware/firmware/common/dsp_iir.cpp.s
 
 mayhem-firmware/firmware/common/ert_packet.o: mayhem-firmware/firmware/common/ert_packet.cpp.o
 .PHONY : mayhem-firmware/firmware/common/ert_packet.o
@@ -5841,6 +6033,78 @@ patched_fw/event_m4.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/event_m4.cpp.s
 .PHONY : patched_fw/event_m4.cpp.s
 
+patched_fw/proc_am_audio.o: patched_fw/proc_am_audio.cpp.o
+.PHONY : patched_fw/proc_am_audio.o
+
+# target to build an object file
+patched_fw/proc_am_audio.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_am_audio.cpp.o
+.PHONY : patched_fw/proc_am_audio.cpp.o
+
+patched_fw/proc_am_audio.i: patched_fw/proc_am_audio.cpp.i
+.PHONY : patched_fw/proc_am_audio.i
+
+# target to preprocess a source file
+patched_fw/proc_am_audio.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_am_audio.cpp.i
+.PHONY : patched_fw/proc_am_audio.cpp.i
+
+patched_fw/proc_am_audio.s: patched_fw/proc_am_audio.cpp.s
+.PHONY : patched_fw/proc_am_audio.s
+
+# target to generate assembly for a file
+patched_fw/proc_am_audio.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_am_audio.cpp.s
+.PHONY : patched_fw/proc_am_audio.cpp.s
+
+patched_fw/proc_nfm_audio.o: patched_fw/proc_nfm_audio.cpp.o
+.PHONY : patched_fw/proc_nfm_audio.o
+
+# target to build an object file
+patched_fw/proc_nfm_audio.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_nfm_audio.cpp.o
+.PHONY : patched_fw/proc_nfm_audio.cpp.o
+
+patched_fw/proc_nfm_audio.i: patched_fw/proc_nfm_audio.cpp.i
+.PHONY : patched_fw/proc_nfm_audio.i
+
+# target to preprocess a source file
+patched_fw/proc_nfm_audio.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_nfm_audio.cpp.i
+.PHONY : patched_fw/proc_nfm_audio.cpp.i
+
+patched_fw/proc_nfm_audio.s: patched_fw/proc_nfm_audio.cpp.s
+.PHONY : patched_fw/proc_nfm_audio.s
+
+# target to generate assembly for a file
+patched_fw/proc_nfm_audio.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_nfm_audio.cpp.s
+.PHONY : patched_fw/proc_nfm_audio.cpp.s
+
+patched_fw/proc_wfm_audio.o: patched_fw/proc_wfm_audio.cpp.o
+.PHONY : patched_fw/proc_wfm_audio.o
+
+# target to build an object file
+patched_fw/proc_wfm_audio.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_wfm_audio.cpp.o
+.PHONY : patched_fw/proc_wfm_audio.cpp.o
+
+patched_fw/proc_wfm_audio.i: patched_fw/proc_wfm_audio.cpp.i
+.PHONY : patched_fw/proc_wfm_audio.i
+
+# target to preprocess a source file
+patched_fw/proc_wfm_audio.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_wfm_audio.cpp.i
+.PHONY : patched_fw/proc_wfm_audio.cpp.i
+
+patched_fw/proc_wfm_audio.s: patched_fw/proc_wfm_audio.cpp.s
+.PHONY : patched_fw/proc_wfm_audio.s
+
+# target to generate assembly for a file
+patched_fw/proc_wfm_audio.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_wfm_audio.cpp.s
+.PHONY : patched_fw/proc_wfm_audio.cpp.s
+
 patched_fw/proc_wideband_spectrum.o: patched_fw/proc_wideband_spectrum.cpp.o
 .PHONY : patched_fw/proc_wideband_spectrum.o
 
@@ -6128,6 +6392,30 @@ src/platform/portapack_shim/debug_emu.s: src/platform/portapack_shim/debug_emu.c
 src/platform/portapack_shim/debug_emu.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/src/platform/portapack_shim/debug_emu.cpp.s
 .PHONY : src/platform/portapack_shim/debug_emu.cpp.s
+
+src/platform/portapack_shim/iq_source.o: src/platform/portapack_shim/iq_source.cpp.o
+.PHONY : src/platform/portapack_shim/iq_source.o
+
+# target to build an object file
+src/platform/portapack_shim/iq_source.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/src/platform/portapack_shim/iq_source.cpp.o
+.PHONY : src/platform/portapack_shim/iq_source.cpp.o
+
+src/platform/portapack_shim/iq_source.i: src/platform/portapack_shim/iq_source.cpp.i
+.PHONY : src/platform/portapack_shim/iq_source.i
+
+# target to preprocess a source file
+src/platform/portapack_shim/iq_source.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/src/platform/portapack_shim/iq_source.cpp.i
+.PHONY : src/platform/portapack_shim/iq_source.cpp.i
+
+src/platform/portapack_shim/iq_source.s: src/platform/portapack_shim/iq_source.cpp.s
+.PHONY : src/platform/portapack_shim/iq_source.s
+
+# target to generate assembly for a file
+src/platform/portapack_shim/iq_source.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/src/platform/portapack_shim/iq_source.cpp.s
+.PHONY : src/platform/portapack_shim/iq_source.cpp.s
 
 src/platform/portapack_shim/irq_controls_emu.o: src/platform/portapack_shim/irq_controls_emu.cpp.o
 .PHONY : src/platform/portapack_shim/irq_controls_emu.o
@@ -6849,12 +7137,33 @@ help:
 	@echo "... mayhem-firmware/firmware/application/view_factory_base.o"
 	@echo "... mayhem-firmware/firmware/application/view_factory_base.i"
 	@echo "... mayhem-firmware/firmware/application/view_factory_base.s"
+	@echo "... mayhem-firmware/firmware/baseband/audio_compressor.o"
+	@echo "... mayhem-firmware/firmware/baseband/audio_compressor.i"
+	@echo "... mayhem-firmware/firmware/baseband/audio_compressor.s"
+	@echo "... mayhem-firmware/firmware/baseband/audio_output.o"
+	@echo "... mayhem-firmware/firmware/baseband/audio_output.i"
+	@echo "... mayhem-firmware/firmware/baseband/audio_output.s"
+	@echo "... mayhem-firmware/firmware/baseband/audio_stats_collector.o"
+	@echo "... mayhem-firmware/firmware/baseband/audio_stats_collector.i"
+	@echo "... mayhem-firmware/firmware/baseband/audio_stats_collector.s"
 	@echo "... mayhem-firmware/firmware/baseband/baseband_processor.o"
 	@echo "... mayhem-firmware/firmware/baseband/baseband_processor.i"
 	@echo "... mayhem-firmware/firmware/baseband/baseband_processor.s"
 	@echo "... mayhem-firmware/firmware/baseband/baseband_thread.o"
 	@echo "... mayhem-firmware/firmware/baseband/baseband_thread.i"
 	@echo "... mayhem-firmware/firmware/baseband/baseband_thread.s"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_decimate.o"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_decimate.i"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_decimate.s"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_demodulate.o"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_demodulate.i"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_demodulate.s"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_hilbert.o"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_hilbert.i"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_hilbert.s"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_modulate.o"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_modulate.i"
+	@echo "... mayhem-firmware/firmware/baseband/dsp_modulate.s"
 	@echo "... mayhem-firmware/firmware/baseband/rssi_thread.o"
 	@echo "... mayhem-firmware/firmware/baseband/rssi_thread.i"
 	@echo "... mayhem-firmware/firmware/baseband/rssi_thread.s"
@@ -6897,6 +7206,9 @@ help:
 	@echo "... mayhem-firmware/firmware/common/chibios_cpp.o"
 	@echo "... mayhem-firmware/firmware/common/chibios_cpp.i"
 	@echo "... mayhem-firmware/firmware/common/chibios_cpp.s"
+	@echo "... mayhem-firmware/firmware/common/dsp_iir.o"
+	@echo "... mayhem-firmware/firmware/common/dsp_iir.i"
+	@echo "... mayhem-firmware/firmware/common/dsp_iir.s"
 	@echo "... mayhem-firmware/firmware/common/ert_packet.o"
 	@echo "... mayhem-firmware/firmware/common/ert_packet.i"
 	@echo "... mayhem-firmware/firmware/common/ert_packet.s"
@@ -6996,6 +7308,15 @@ help:
 	@echo "... patched_fw/event_m4.o"
 	@echo "... patched_fw/event_m4.i"
 	@echo "... patched_fw/event_m4.s"
+	@echo "... patched_fw/proc_am_audio.o"
+	@echo "... patched_fw/proc_am_audio.i"
+	@echo "... patched_fw/proc_am_audio.s"
+	@echo "... patched_fw/proc_nfm_audio.o"
+	@echo "... patched_fw/proc_nfm_audio.i"
+	@echo "... patched_fw/proc_nfm_audio.s"
+	@echo "... patched_fw/proc_wfm_audio.o"
+	@echo "... patched_fw/proc_wfm_audio.i"
+	@echo "... patched_fw/proc_wfm_audio.s"
 	@echo "... patched_fw/proc_wideband_spectrum.o"
 	@echo "... patched_fw/proc_wideband_spectrum.i"
 	@echo "... patched_fw/proc_wideband_spectrum.s"
@@ -7032,6 +7353,9 @@ help:
 	@echo "... src/platform/portapack_shim/debug_emu.o"
 	@echo "... src/platform/portapack_shim/debug_emu.i"
 	@echo "... src/platform/portapack_shim/debug_emu.s"
+	@echo "... src/platform/portapack_shim/iq_source.o"
+	@echo "... src/platform/portapack_shim/iq_source.i"
+	@echo "... src/platform/portapack_shim/iq_source.s"
 	@echo "... src/platform/portapack_shim/irq_controls_emu.o"
 	@echo "... src/platform/portapack_shim/irq_controls_emu.i"
 	@echo "... src/platform/portapack_shim/irq_controls_emu.s"
