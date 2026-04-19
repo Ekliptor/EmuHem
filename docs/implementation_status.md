@@ -4,7 +4,7 @@ Last updated: 2026-04-20 (Phase 12 — TX path lands: `IQSink` abstraction + `Fi
 
 ## Overview
 
-EmuHem compiles ~310 PortaPack Mayhem firmware C++ source files natively on macOS using Clang/C++23, replacing hardware layers with desktop shims. The emulator renders the full Mayhem UI in an SDL3 window with keyboard/mouse navigation and has a working baseband processing pipeline with synthetic RF data.
+EmuHem compiles ~310 PortaPack Mayhem firmware C++ source files natively on macOS using Clang/C++23, replacing hardware layers with desktop shims. The emulator renders the full Mayhem UI in an SDL3 window with keyboard/mouse navigation and runs a bidirectional baseband pipeline: RX from synthetic noise, `.c8`/`.cu8`/`.cs16`/`.cf32`/`.wav` files, remote `rtl_tcp` servers, or any SoapySDR-supported USB SDR (HackRF, RTL-SDR, Airspy, Lime, Pluto, Blade…); TX out to CS8 files or SoapySDR TX devices. 43 baseband processors (1 spectrum, 3 RX audio, 21 RX digital, 18 TX modulators) resolve through the `image_tag_t` → factory registry.
 
 ---
 
@@ -490,24 +490,27 @@ Infrastructure is solid and most named Mayhem apps (spectrum, audio demodulators
 - **Automated test harness**: `--headless --keys=...` enables scripted runs, but no scenarios are written yet — no per-app smoke tests, no framebuffer-hash regression suite, no CI integration.
 - **Crash artifacts**: signal handler prints a backtrace to stderr but doesn't write a crash dump file to disk.
 
-### Baseband processors — 30 of 55 still uncompiled
+### Baseband processors — ~12 of 55 still uncompiled
 
-Registered in `core_control_emu.cpp` today (25): WidebandSpectrum (`PSPE`), NarrowbandAMAudio (`PAMA`), NarrowbandFMAudio (`PNFM`), WidebandFMAudio (`PWFM`), POCSAG (`PPO2`), TPMS (`PTPM`), ERT (`PERT`), AIS (`PAIS`), Tones (`PTON`), AudioBeep (`PABP`), SigGen (`PSIG`), AFSK RX (`PAFR`), APRS RX (`PAPR`), BTLE RX (`PBTR`), NRF24 RX (`PNRR`), FSK RX (`PFSR`), Weather (`PWTH`), SubGhzD (`PSGD`), Protoview (`PPVW`), AFSK TX (`PAFT`), FSK TX (`PFSK`), OOK (`POOK`), BTLE TX (`PBTT`), ADS-B TX (`PADT`), RDS (`PRDS`). Still absent:
+43 processors resolve; see the Registered Baseband Processors table above for the full list. Still absent:
 
-- **RX**: ADS-B, ACARS, SSTV RX, WEFAX RX, NOAA APT RX, Sonde, EPIRB, MORSE, RTTY, FLEX, SubCar, TimeSink, ToneDetect, SigFRX, AM TV.
-- **TX**: EPIRB TX, P25 TX, Morse TX, RTTY TX, SSTV TX, BintStreamTX, MicTX, AudioTX, GPS sim, RDS (done), jammer, spectrum painter, OOK stream TX.
+- **RX**: SSTV RX, WEFAX RX, NOAA APT RX, SigFRX, AM TV.
+- **TX**: SSTV TX, BintStreamTX, MicTX (needs `init_audio_in()` variant in the macro), OOK stream TX.
 - **Capture / replay**: `proc_capture`, `proc_replay` (need SD-card integration polish + `MultiDecimator` rename — same collision pattern as Phase 10's FSK_RX fix).
 - **Utility**: `proc_test`, `proc_flash_utility`, `proc_sd_over_usb`.
+- **Superseded**: `proc_pocsag` (v1, replaced by `PPO2`).
 
-Each new processor needs: the `.cpp` patched via `emuhem_strip_proc_main` (see CMakeLists.txt Phase 10 macro), support `.cpp` files added to CMake (baseband/ must be explicit; common/ is globbed), registered in `core_control_emu.cpp`. Watch for: PRALINE-pattern headers, 64-bit `unsigned long` assumptions, `constexpr size_t` at function scope that reads static class members, and global-scope class-name collisions like `MultiDecimator`.
+Each new processor needs: the `.cpp` patched via `emuhem_strip_proc_main` (see CMakeLists.txt Phase 10 macro), support `.cpp` files added to CMake (baseband/ must be explicit; common/ is globbed), registered in `core_control_emu.cpp`. Watch for: PRALINE-pattern headers, 64-bit `unsigned long` assumptions, `constexpr size_t` at function scope that reads static class members, and global-scope class-name collisions like `MultiDecimator` / `EccContainer` (wrap the duplicate in `#if 0` via CMake patching).
 
-### Transmit path
+### Transmit path extensions (Phase 12 landed; these are follow-ups)
 
-Hardware TX stubs are no-ops. There's no TX DMA, no modulator → RF path, no way to sink emitted samples anywhere (rtl_tcp server is receive-only today; no file TX sink either). Needed before any of the TX processors above become useful:
+The core TX path shipped in Phase 12 — direction-aware `baseband::dma`, `IQSink` abstraction, file + SoapySDR sinks, rtl_tcp fanout on TX. Still deferred:
 
-- Bidirectional `baseband::dma` that accepts TX buffers from the firmware and routes them to an egress sink.
-- An `IQSink` abstraction mirroring `IQSource` (file writer, rtl_tcp-as-TX, loopback to RX for end-to-end tests).
-- `radio::disable_rf_output` / `enable_rf_output` plumbing.
+- **TX-to-RX loopback sink** for end-to-end self-tests (generate a waveform, decode it with the matching RX processor, assert the recovered bits).
+- **rtl_tcp-as-TX-client** (send I/Q to a remote custom TX server). Not a standard rtl_tcp mode; low priority.
+- **`radio::disable_rf_output` / `enable_rf_output` plumbing**: stubs currently no-op; sink is always "live" when the processor runs. Matters once the firmware UI exposes a TX mute.
+- **WAV/CS16/CF32 output formats** on `FileIQSink`. CS8 is the only output format today (sufficient for HackRF round-trips).
+- **Per-direction TX gain hook**: `on_tx_gain_changed` reuses the same `tuner_gain` bridge as RX; if the firmware ever sets RX and TX gain separately within one session we'll need a second bridge.
 
 ### Unfinished shims
 
@@ -530,8 +533,8 @@ Hardware TX stubs are no-ops. There's no TX DMA, no modulator → RF path, no wa
 
 Pick the highest-leverage track for the intended use case:
 
-1. **More firmware apps** (most user-visible): add baseband processors in small batches, starting with SSB and capture/replay since they reuse the existing DSP helpers heavily.
-2. **TX path** (unblocks half the firmware): design and implement `IQSink` + bidirectional DMA; then enable one TX processor (e.g. `proc_tones`) as a proof of concept.
-3. **Windows port** (broadens audience): thin Winsock2 + Win32 FS wrappers behind the existing POSIX call sites.
-4. **Test harness** (keeps everything from rotting): write per-app scripted `--keys` scenarios with framebuffer hash assertions; wire into CI.
-5. **`--app=<name>` launch flag** (cheap, unblocks #4): bypass menu navigation for automated testing.
+1. **Remaining ~12 processors** (most user-visible): capture/replay is the biggest single unlock (enables I/Q recording from inside the UI). SSTV/WEFAX/NOAA APT RX need image-rendering hooks wired to `baseband_hw_emu.cpp`. MicTX needs an `init_audio_in()` variant in the `emuhem_strip_proc_main` macro.
+2. **Windows port** (broadens audience): thin Winsock2 + Win32 FS wrappers behind the existing POSIX call sites (`<sys/socket.h>`, `<netdb.h>`, `<fcntl.h>`, `<sys/statvfs.h>`, `<fnmatch.h>`).
+3. **`--app=<name>` launch flag** (cheap, unblocks #4): bypass menu navigation for automated testing.
+4. **Test harness** (keeps everything from rotting): write per-app scripted `--keys` scenarios with framebuffer hash assertions; wire into CI. Especially valuable for the 21 RX decoders now that they decode real captures.
+5. **TX loopback sink**: completes the end-to-end TX → decoder test story (generate RDS, decode it back; generate AFSK, decode it back — regression tests for the modulator/demodulator pair).

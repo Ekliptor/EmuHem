@@ -30,6 +30,7 @@
 # CLion
 .idea/
 cmake-build-*/
+build/
 *.iml
 
 # CMake
@@ -46,3 +47,6 @@ _deps/
 PortaRF/
 hackrf/
 mayhem-firmware/
+
+# clangd cache
+.cache/
