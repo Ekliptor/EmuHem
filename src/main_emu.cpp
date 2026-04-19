@@ -237,7 +237,18 @@ void print_help(const char* argv0) {
         "  --iq-file=PATH         Play this .c8/.cu8/.cs16/.cf32/.wav capture.\n"
         "  --iq-loop=0|1          Loop the file (default 1).\n"
         "  --iq-tcp=HOST:PORT     Connect to a remote rtl_tcp server.\n"
+        "  --soapy=ARGS           Use a USB SDR dongle via SoapySDR (e.g. 'driver=hackrf').\n"
+        "  --soapy-rate=HZ        Initial sample rate for --soapy (default 2_400_000).\n"
+        "  --soapy-freq=HZ        Initial center freq for --soapy (default 100_000_000).\n"
+        "  --soapy-gain=TENTHS_DB Initial gain for --soapy in 0.1 dB units (default 200).\n"
         "  --iq-center=HZ         Declared recording center (activates NCO shift).\n"
+        "\n"
+        "I/Q TX sink (where TX processors emit I/Q):\n"
+        "  --iq-tx-file=PATH      Write TX I/Q to a CS8 file (.c8).\n"
+        "  --iq-tx-soapy=ARGS     Transmit via a SoapySDR device (e.g. 'driver=hackrf').\n"
+        "  --iq-tx-soapy-rate=HZ  Initial TX sample rate (default 2_400_000).\n"
+        "  --iq-tx-soapy-freq=HZ  Initial TX center freq (default 100_000_000).\n"
+        "  --iq-tx-soapy-gain=TENTHS_DB  Initial TX gain in 0.1 dB (default 200).\n"
         "\n"
         "Server:\n"
         "  --rtl-tcp-server=HOST:PORT   Serve baseband I/Q as cu8 to external SDR clients.\n"
@@ -255,8 +266,9 @@ void print_help(const char* argv0) {
         "\n"
         "Examples:\n"
         "  %s --headless --duration=5 --keys='DDS' --iq-file=capture.cu8\n"
-        "  %s --bezel=0 --rtl-tcp-server=0.0.0.0:1234\n",
-        argv0, argv0, argv0);
+        "  %s --bezel=0 --rtl-tcp-server=0.0.0.0:1234\n"
+        "  %s --soapy='driver=hackrf' --soapy-rate=8000000 --soapy-freq=915000000\n",
+        argv0, argv0, argv0, argv0);
 }
 
 bool parse_int(std::string_view s, int& out) {
@@ -307,6 +319,15 @@ bool parse_cli(int argc, char** argv, CliOptions& opts) {
         if (takes("iq-loop"))            { ::setenv("EMUHEM_IQ_LOOP", v.c_str(), 1); continue; }
         if (takes("iq-tcp"))             { ::setenv("EMUHEM_IQ_TCP",  v.c_str(), 1); continue; }
         if (takes("iq-center"))          { ::setenv("EMUHEM_IQ_CENTER", v.c_str(), 1); continue; }
+        if (takes("soapy"))              { ::setenv("EMUHEM_IQ_SOAPY", v.c_str(), 1); continue; }
+        if (takes("soapy-rate"))         { ::setenv("EMUHEM_IQ_SOAPY_RATE", v.c_str(), 1); continue; }
+        if (takes("soapy-freq"))         { ::setenv("EMUHEM_IQ_SOAPY_FREQ", v.c_str(), 1); continue; }
+        if (takes("soapy-gain"))         { ::setenv("EMUHEM_IQ_SOAPY_GAIN", v.c_str(), 1); continue; }
+        if (takes("iq-tx-file"))         { ::setenv("EMUHEM_IQ_TX_FILE", v.c_str(), 1); continue; }
+        if (takes("iq-tx-soapy"))        { ::setenv("EMUHEM_IQ_TX_SOAPY", v.c_str(), 1); continue; }
+        if (takes("iq-tx-soapy-rate"))   { ::setenv("EMUHEM_IQ_TX_SOAPY_RATE", v.c_str(), 1); continue; }
+        if (takes("iq-tx-soapy-freq"))   { ::setenv("EMUHEM_IQ_TX_SOAPY_FREQ", v.c_str(), 1); continue; }
+        if (takes("iq-tx-soapy-gain"))   { ::setenv("EMUHEM_IQ_TX_SOAPY_GAIN", v.c_str(), 1); continue; }
         if (takes("rtl-tcp-server"))     { ::setenv("EMUHEM_RTL_TCP_SERVER", v.c_str(), 1); continue; }
         if (takes("sdcard-root"))        { ::setenv("EMUHEM_SDCARD_ROOT", v.c_str(), 1); continue; }
         if (takes("pmem-file"))          { ::setenv("EMUHEM_PMEM_FILE", v.c_str(), 1); continue; }

@@ -1,6 +1,6 @@
 # EmuHem Implementation Status
 
-Last updated: 2026-04-19 (Phase 7 — CLI flags + headless + scripted keys + crash handler)
+Last updated: 2026-04-20 (Phase 12 — TX path lands: `IQSink` abstraction + `FileIQSink` + `SoapyIQSink`; 18 TX processors now emit real I/Q)
 
 ## Overview
 
@@ -64,6 +64,69 @@ Three audio demodulators compile and register. SDL3 audio output stream replaces
   - `tx_empty_buffer()` rotates between two 32-sample staging slots; on each call it pushes the previous slot's contents via `SDL_PutAudioStreamData`, then returns the next slot for the caller to fill. This matches the firmware's pattern where the returned buffer is filled in place before the next call.
   - `disable()` destroys the stream cleanly
 - **`SDL_INIT_AUDIO`** added to `SDL_Init` in `main_emu.cpp`
+
+### Phase 12: TX Path — `IQSink` abstraction (2026-04-20)
+
+The 18 TX processors registered in Phases 9/10/11 now have somewhere to send their I/Q. Mirrors the RX-side `IQSource` design — same env-var precedence, same lazy-init, same tuning-hook interface.
+
+- **`IQSink` base class** (`src/platform/portapack_shim/iq_source.hpp`): `write(complex8_t*, count)`, `name()`, plus optional `on_sample_rate_changed` / `on_center_frequency_changed` / `on_tx_gain_changed`.
+- **`NullIQSink`**: default when no TX env var set. Discards samples, logs a dropped count every ~1M samples so the user is not surprised by silence.
+- **`FileIQSink`**: writes raw CS8 (interleaved int8 I/Q) to a file. Byte-identical to `FileIQSource::Format::CS8` — a file produced by `--iq-tx-file=out.c8` loops back unmodified via `--iq-file=out.c8`.
+- **`SoapyIQSink`** (guarded by `EMUHEM_HAS_SOAPYSDR`): opens a SoapySDR-supported TX device (HackRF, PlutoSDR, LimeSDR, BladeRF...), picks CS8 / CS16 / CF32 from `getStreamFormats(SOAPY_SDR_TX, 0)`, spawns a writer thread that drains a 256k-sample ring buffer into `writeStream`. Overflow drops oldest sample (latency cap over correctness when the host can't keep up). `on_*` hooks push setSampleRate/setFrequency/setGain onto the device.
+- **Direction-aware `baseband_dma_emu.cpp`**: `configure()` now latches `baseband::Direction`. `wait_for_buffer()` branches: RX (unchanged) fills the slice from the source; TX drains the previous slice to the sink then hands out a fresh zeroed slice. `disable()` performs a final flush so the last 2048 samples aren't lost on a fast stop. `set_sample_rate` forwards to both source and sink. Tuning bridges (`emuhem_iq_set_center_frequency`, `emuhem_iq_set_tuner_gain_tenths_db`) also forward to the sink.
+- **rtl_tcp fanout on TX**: transmitted I/Q is fanned out to any connected rtl_tcp listener the same way RX samples are. Lets you visualize your own modulator output in gqrx/SDR++ without extra hardware.
+- **CLI flags** (main_emu.cpp): `--iq-tx-file=PATH`, `--iq-tx-soapy=<args>`, `--iq-tx-soapy-rate`, `--iq-tx-soapy-freq`, `--iq-tx-soapy-gain` — all mirror the RX flag names. Env equivalents: `EMUHEM_IQ_TX_FILE`, `EMUHEM_IQ_TX_SOAPY`, `EMUHEM_IQ_TX_SOAPY_RATE/FREQ/GAIN`.
+- **Sink preload**: when any `EMUHEM_IQ_TX_*` env is set, the sink is instantiated eagerly in `preload_source()` so path typos / missing-device errors surface at startup rather than on first TX app launch.
+- **`EMUHEM_TX_TEST=<count>` diagnostic**: startup-time hook that writes a `count`-sample ramp pattern through the active sink (mirrors the existing `EMUHEM_NCO_TEST` diagnostic for RX). Lets the TX path be validated without launching a firmware TX app.
+- **Verified**: clean build. Regression matrix (baseline, `--iq-file`, `--soapy`, `--iq-tx-soapy=driver=nosuchdriver`) all clean. End-to-end TX write: `EMUHEM_TX_TEST=4096 --iq-tx-file=/tmp/tx.c8` produces exactly 8192 bytes of CS8 ramp data. Round-trip verified: `--iq-tx-file=out.c8` → `--iq-file=out.c8` reads back the same sample count.
+
+Out of scope (deferred): rtl_tcp-as-TX-client, TX-to-RX loopback, `radio::disable_rf_output` plumbing, WAV/CS16/CF32 output formats.
+
+### Phase 11: 18 More Baseband Processors (2026-04-20)
+
+Registry now maps 43 image tags to factories. Added 9 RX decoders plus 9 TX modulators.
+
+- **RX decoders (9)**: `ACARSProcessor` (`PACA`), `ADSBRXProcessor` (`PADR`, iconic ADS-B aircraft tracking), `FlexProcessor` (`PFLX`, FLEX paging), `SondeProcessor` (`PSON`, weather balloons), `EPIRBProcessor` (`PEPI`, emergency beacons), `ToneDetectProcessor` (`PTNE`), `SubCarProcessor` (`PSCD`), `RTTYRxProcessor` (`PRTR`), `MorseProcessor` (`PMRS`).
+- **TX modulators (9, silent)**: `MorseTXProcessor` (`PMRT`), `RTTYTXProcessor` (`PRTT`), `JammerProcessor` (`PJAM`), `P25TxProcessor` (`P25T`), `GPSReplayProcessor` (`PGPS`), `SpectrumPainterProcessor` (`PSPT`), `AudioTXProcessor` (`PATX`), `TimeSinkProcessor` (`PTSK`), `EPIRBTXProcessor` (`PEPT`).
+- **Macro idempotency fix**: the Phase-10 `FskMultiDecimator` rename did `file(COPY_FILE ... ONLY_IF_DIFFERENT)` back into `FW_DIR`, which contaminated the source on re-configure (each run pre-pended another `Fsk`). Removed the in-place copy; `proc_fsk_rx.cpp` lives in `PATCHED_FW_DIR` so same-dir include already resolves to the patched header. Renamed via a sentinel pattern (`MultiDecimator<` → `__SENTINEL_MD__<` → `FskMultiDecimator<`) to make the replace idempotent against already-renamed text.
+- **`proc_sonde` separate patch**: its `main()` has an extra blank line between `event_dispatcher.run();` and `return 0;` that the standard macro doesn't handle. Patched directly with a dedicated `file(READ/REPLACE/WRITE)` block.
+- **`proc_time_sink` static-call rename**: only processor where `EventDispatcher::events_flag(...)` is called statically (not just as a local type in `main()`). The Phase-3 rename of `EventDispatcher` → `BasebandEventDispatcher` only happened in `event_m4.{h,c}pp`, so patched `proc_time_sink.cpp` after the macro strip to rename the static call site.
+- **`proc_flex` EccContainer duplicate**: `proc_flex.cpp` reimplements `pocsag::EccContainer::{ctor,setup_ecc,error_correct}` inline, explicitly to avoid linking `pocsag.cpp` in its standalone binary. In EmuHem both `POCSAGProcessor` and `FlexProcessor` are compiled so both `pocsag.cpp` and `proc_flex.cpp` link — linker errors on duplicate symbols. Wrapped the duplicated block in `#if 0 ... #endif` via CMake patching.
+- **Verified**: clean build; headless smoke test passes; 43 tags registered (4 from Phase 3.5, 7 from Phase 9, 14 from Phase 10, 18 from Phase 11).
+
+### Phase 10: 14 More Baseband Processors (2026-04-20)
+
+Registry now maps 25 image tags to factories. Added 8 RX digital decoders plus 6 TX modulators.
+
+- **RX digital decoders (8)**: `AFSKRxProcessor` (`PAFR`), `APRSRxProcessor` (`PAPR`), `BTLERxProcessor` (`PBTR`), `NRFRxProcessor` (`PNRR`), `FSKRxProcessor` (`PFSR`), `WeatherProcessor` (`PWTH`), `SubGhzDProcessor` (`PSGD`), `ProtoViewProcessor` (`PPVW`).
+- **TX modulators (6)**: `AFSKProcessor` (`PAFT`), `FSKProcessor` (`PFSK`), `OOKProcessor` (`POOK`), `BTLETxProcessor` (`PBTT`), `ADSBTXProcessor` (`PADT`), `RDSProcessor` (`PRDS`). All still silent — no `IQSink`.
+- **CMake macro `emuhem_strip_proc_main`**: factored the repetitive `file(READ) / string(REPLACE main-block / WRITE)` + `constexpr → const` demotion into one reusable macro, parameterized on `(basename, class_name, has_audio_init, has_blank_line)`. Collapses what would have been ~14× 7-line patch blocks into one 25-line macro + 14 one-liners. Existing Phase 9 blocks were left unchanged to avoid churn.
+- **Support file added**: `baseband/stream_input.cpp` (needed by AFSK/APRS/FSK RX). `aprs_packet.cpp` (common/) was already caught by the common glob.
+- **`MultiDecimator` collision patched**: `proc_wfm_audio.hpp` (Phase 3.5) and `proc_fsk_rx.hpp` (Phase 10) each define a global-scope `MultiDecimator` class template. Firmware ships each processor as its own binary so there's no conflict there; EmuHem registers both via `core_control_emu.cpp` so both headers land in the same TU. Fixed by renaming the FSK_RX variant in-place to `FskMultiDecimator` (3 hits, all in the header; the .cpp never references it). A similar rename will be needed when `proc_capture` lands.
+- **Verified**: clean build; headless smoke tests pass; registered tags: 25 total (4 from Phase 3.5, 7 from Phase 9, 14 from Phase 10). No regressions in `--iq-file` / `--soapy` / plain launch.
+
+### Phase 9: Additional Baseband Processors (2026-04-20)
+
+Seven more baseband processors light up, covering the most visible Mayhem apps. The registry now maps 11 `image_tag_t` values to factories — the 4 from Phase 3/3.5 plus POCSAG2, TPMS, ERT, AIS, Tones, AudioBeep, and SigGen.
+
+- **RX digital decoders (4)**: `POCSAGProcessor` (`PPO2`), `TPMSProcessor` (`PTPM`), `ERTProcessor` (`PERT`), `AISProcessor` (`PAIS`). Fed with I/Q from `--iq-file=capture.cu8` or `--soapy=driver=rtlsdr`, they decode pager frames, tire pressure IDs, smart-meter transmissions, and maritime AIS packets and hand them up to the application layer through the existing `shared_memory.application_queue`.
+- **TX processors (3)**: `TonesProcessor` (`PTON`), `AudioBeepProcessor` (`PABP`), `SigGenProcessor` (`PSIG`). They initialize cleanly and the menu launches them, but EmuHem has no `IQSink` yet — generated samples are discarded. No audible output, no crash. Phase 10 will add an egress path.
+- **Support files pulled into build**: `channel_decimator.cpp`, `matched_filter.cpp`, `clock_recovery.cpp`, `packet_builder.cpp` (baseband DSP helpers). The `common/` globber already sweeps in `pocsag.cpp`, `pocsag_packet.cpp`, `ais_baseband.cpp`, `ais_packet.cpp`, `ert_packet.cpp`, `tpms_packet.cpp`.
+- **CMake patches**: `int main()` stripped from each of the 7 `proc_*.cpp` files; `proc_pocsag2.cpp` also got the `constexpr size_t` → `const size_t` demotion (Clang rejects function-scope constexpr reads of static class members). `phase_detector.hpp` popcountl static_assert switched from `unsigned long` (8 bytes on 64-bit host) to `unsigned int` + `__builtin_popcount`.
+- **Timestamp shim**: baseband packet builders call `Timestamp::now()`; firmware defines that only on the M4 branch (where `Timestamp` is its own struct). In EmuHem `Timestamp` aliases `lpc43xx::rtc::RTC` via buffer.hpp's M0 branch, so `RTC::now()` is declared in `lpc43xx_cpp.hpp` and implemented in `rtc_time_emu.cpp` using the host wall clock (reuses the existing `rtc_time::now()` helper).
+- **Registry**: `core_control_emu.cpp` now includes 11 processor headers + 11 `push_back` entries. The old "ToDo: register SSTV/AFSK/AIS..." comment is replaced with a longer TODO list pointing at the remaining phases.
+- **Verified**: clean build with no new errors beyond warnings already present in Phase 8. Headless smoke test boots/exits cleanly. Regressions (`--iq-file`, `--soapy=driver=nosuchdriver`, plain) all exit cleanly. Live decode with real captures/dongles deferred (no test captures or hardware attached to this machine).
+
+### Phase 8: SoapySDR I/Q Source (2026-04-19)
+
+EmuHem can now stream live I/Q directly from any SoapySDR-supported USB dongle (HackRF, RTL-SDR, Airspy, LimeSDR, PlutoSDR, BladeRF, ...) without launching a separate `rtl_tcp` process.
+
+- **`SoapyIQSource`** (`iq_source.hpp/.cpp`, compiled behind `#ifdef EMUHEM_HAS_SOAPYSDR`): opens the device with a user-supplied Soapy arg string, negotiates a sample format (prefers `SOAPY_SDR_CS8` for direct memcpy, falls back to `CS16` with `>>8` then `CF32` with `clamp(x*127)`), applies initial rate/freq/gain from env defaults, then spawns a receiver thread that drains `readStream` into a mutex-guarded 262 144-sample ring buffer. `read()` drains the ring and zero-pads on under-run so DMA pacing stays steady. Destructor sets stop flag, deactivates + closes the stream, unmakes the device, joins the thread, logs drop count. Upstream `on_*_changed` hooks call `device->setSampleRate` / `setFrequency` / `setGain` with the same dedup-via-atomic pattern as `RtlTcpClientSource`.
+- **Factory precedence updated**: `EMUHEM_IQ_FILE` → **`EMUHEM_IQ_SOAPY`** → `EMUHEM_IQ_TCP` → noise. Each failure (invalid args, device busy, no matching format) logs and falls through. Soapy is marked `is_network_tuned = true` so `FrequencyShiftingSource` does NOT wrap it — the dongle centers its own RF.
+- **Startup defaults** (before firmware ever tunes): `EMUHEM_IQ_SOAPY_RATE=<hz>` (default 2_400_000), `EMUHEM_IQ_SOAPY_FREQ=<hz>` (default 100_000_000), `EMUHEM_IQ_SOAPY_GAIN=<tenths_db>` (default 200 = 20 dB).
+- **CLI flags** (`main_emu.cpp::parse_cli`): `--soapy=ARGS`, `--soapy-rate=HZ`, `--soapy-freq=HZ`, `--soapy-gain=TENTHS_DB`. Help text adds example `--soapy='driver=hackrf' --soapy-rate=8000000 --soapy-freq=915000000`.
+- **Optional CMake dep** (`CMakeLists.txt`): `find_package(SoapySDR CONFIG QUIET)` with Homebrew Cellar paths; on success links `SoapySDR` target and defines `EMUHEM_HAS_SOAPYSDR=1`. Without SoapySDR installed the build still succeeds; attempting `--soapy=` logs "SoapySDR support not compiled in" and falls through.
+- **Verified**: CMake reports `SoapySDR found: USB SDR sources enabled`; `--help` lists the four new flags; a bogus `--soapy='driver=nosuchdriver'` logs the Soapy error and gracefully falls back to the noise source (no crash); regression runs (plain, `--iq-file=...`, `--headless`) behave identically. Live-device test requires an attached dongle (`SoapySDRUtil --find` currently reports none on this machine).
 
 ### Phase 7: CLI & Diagnostics (2026-04-19)
 
@@ -334,13 +397,55 @@ cmake --build build -j8
 
 ## Registered Baseband Processors
 
-| Image Tag | Class | Status |
-|-----------|-------|--------|
-| `PSPE` (wideband spectrum) | `WidebandSpectrum` | Compiled, registered |
-| `PAMA` (AM audio) | `NarrowbandAMAudio` | Compiled, registered (Phase 3.5) |
-| `PNFM` (narrowband FM) | `NarrowbandFMAudio` | Compiled, registered (Phase 3.5) |
-| `PWFM` (wideband FM) | `WidebandFMAudio` | Compiled, registered (Phase 3.5) |
-| Others (53 remaining) | Various | Not yet compiled |
+**43 of ~55 image tags resolve.** TX processors emit real I/Q since Phase 12 (`IQSink`).
+
+| Phase | Tag | Class | Type |
+|-------|-----|-------|------|
+| 3 | `PSPE` | `WidebandSpectrum` | Spectrum |
+| 3.5 | `PAMA` | `NarrowbandAMAudio` | RX audio |
+| 3.5 | `PNFM` | `NarrowbandFMAudio` | RX audio |
+| 3.5 | `PWFM` | `WidebandFMAudio` | RX audio |
+| 9 | `PPO2` | `POCSAGProcessor` | RX digital |
+| 9 | `PTPM` | `TPMSProcessor` | RX digital |
+| 9 | `PERT` | `ERTProcessor` | RX digital |
+| 9 | `PAIS` | `AISProcessor` | RX digital |
+| 9 | `PTON` | `TonesProcessor` | TX modulator |
+| 9 | `PABP` | `AudioBeepProcessor` | TX modulator |
+| 9 | `PSIG` | `SigGenProcessor` | TX modulator |
+| 10 | `PAFR` | `AFSKRxProcessor` | RX digital |
+| 10 | `PAPR` | `APRSRxProcessor` | RX digital |
+| 10 | `PBTR` | `BTLERxProcessor` | RX digital |
+| 10 | `PNRR` | `NRFRxProcessor` | RX digital |
+| 10 | `PFSR` | `FSKRxProcessor` | RX digital |
+| 10 | `PWTH` | `WeatherProcessor` | RX digital |
+| 10 | `PSGD` | `SubGhzDProcessor` | RX digital |
+| 10 | `PPVW` | `ProtoViewProcessor` | RX digital |
+| 10 | `PAFT` | `AFSKProcessor` | TX modulator |
+| 10 | `PFSK` | `FSKProcessor` | TX modulator |
+| 10 | `POOK` | `OOKProcessor` | TX modulator |
+| 10 | `PBTT` | `BTLETxProcessor` | TX modulator |
+| 10 | `PADT` | `ADSBTXProcessor` | TX modulator |
+| 10 | `PRDS` | `RDSProcessor` | TX modulator |
+| 11 | `PACA` | `ACARSProcessor` | RX digital |
+| 11 | `PADR` | `ADSBRXProcessor` | RX digital |
+| 11 | `PFLX` | `FlexProcessor` | RX digital |
+| 11 | `PSON` | `SondeProcessor` | RX digital |
+| 11 | `PEPI` | `EPIRBProcessor` | RX digital |
+| 11 | `PTNE` | `ToneDetectProcessor` | RX digital |
+| 11 | `PSCD` | `SubCarProcessor` | RX digital |
+| 11 | `PRTR` | `RTTYRxProcessor` | RX digital |
+| 11 | `PMRS` | `MorseProcessor` | RX digital |
+| 11 | `PMRT` | `MorseTXProcessor` | TX modulator |
+| 11 | `PRTT` | `RTTYTXProcessor` | TX modulator |
+| 11 | `PJAM` | `JammerProcessor` | TX modulator |
+| 11 | `P25T` | `P25TxProcessor` | TX modulator |
+| 11 | `PGPS` | `GPSReplayProcessor` | TX modulator |
+| 11 | `PSPT` | `SpectrumPainterProcessor` | TX modulator |
+| 11 | `PATX` | `AudioTXProcessor` | TX modulator |
+| 11 | `PTSK` | `TimeSinkProcessor` | TX modulator |
+| 11 | `PEPT` | `EPIRBTXProcessor` | TX modulator |
+
+Tallies: 1 spectrum, 3 RX audio, 21 RX digital, 18 TX modulators = **43 registered**. Remaining (~12): SSTV RX/TX, WEFAX RX, NOAA APT RX, capture/replay, AM TV, MicTX, BintStreamTX, test, SigFRX, flash_utility, sd_over_usb, OOK stream TX, POCSAG v1.
 
 ---
 
@@ -366,18 +471,67 @@ cmake --build build -j8
 - **NCO frequency shifting**: `EMUHEM_IQ_CENTER=<hz>` wraps file / noise sources in a numerically-controlled oscillator that mixes the stream by `(declared - tuned)` Hz, so a capture recorded at one center is rendered at the right offset when the emulator is tuned elsewhere. rtl_tcp client sources are left unwrapped (their remote dongle handles tuning).
 - **Device frame**: window renders a dark bezel around the LCD with a decorative D-pad dot cluster below; disable with `EMUHEM_BEZEL=0`.
 - **Bracketed IPv6 host args**: `EMUHEM_RTL_TCP_SERVER='[::1]:port'` and `EMUHEM_IQ_TCP='[::1]:port'` are accepted alongside the unbracketed form.
-- **CLI**: `--help`, `--headless`, `--duration=SEC`, `--bezel=0|1`, `--iq-file=`, `--iq-loop=`, `--iq-tcp=`, `--iq-center=`, `--rtl-tcp-server=`, `--sdcard-root=`, `--pmem-file=`, `--keys=...` (U/D/L/R/S/B/F/+/-/.), `--key-step=MS`. Env-equivalent flags set `EMUHEM_*` before loading.
+- **CLI**: `--help`, `--headless`, `--duration=SEC`, `--bezel=0|1`, `--iq-file=`, `--iq-loop=`, `--iq-tcp=`, `--iq-center=`, `--soapy=`, `--soapy-rate=`, `--soapy-freq=`, `--soapy-gain=`, `--iq-tx-file=`, `--iq-tx-soapy=`, `--iq-tx-soapy-rate=`, `--iq-tx-soapy-freq=`, `--iq-tx-soapy-gain=`, `--rtl-tcp-server=`, `--sdcard-root=`, `--pmem-file=`, `--keys=...` (U/D/L/R/S/B/F/+/-/.), `--key-step=MS`. Env-equivalent flags set `EMUHEM_*` before loading.
 - **Crash handler**: backtrace to stderr on SIGSEGV/SIGBUS/SIGILL/SIGFPE/SIGABRT, then re-raise for OS-level crash reports.
+- **USB SDR via SoapySDR**: `--soapy='driver=hackrf'` (or any Soapy-supported driver — rtlsdr, airspy, lime, plutosdr, bladerf, ...) streams live I/Q into the baseband pipeline. Tuning/gain/rate changes from the firmware are pushed back to the device through the same `on_*_changed` hooks used by `RtlTcpClientSource`. Optional at build time — `brew install soapysdr`; without it, `--soapy` prints a one-line message and falls back.
+- **RX digital decoders registered (21 total)**: POCSAG2 (`PPO2`), TPMS (`PTPM`), ERT (`PERT`), AIS (`PAIS`), AFSK RX (`PAFR`), APRS RX (`PAPR`), BTLE RX (`PBTR`), NRF24 RX (`PNRR`), FSK RX (`PFSR`), Weather (`PWTH`), SubGhzD (`PSGD`), Protoview (`PPVW`), ACARS (`PACA`), ADS-B RX (`PADR`), FLEX (`PFLX`), Sonde (`PSON`), EPIRB (`PEPI`), ToneDetect (`PTNE`), SubCar (`PSCD`), RTTY RX (`PRTR`), Morse (`PMRS`). All instantiate through `core_control_emu.cpp`'s registry and decode packets from `--iq-file` / `--soapy` / `--iq-tcp` sources.
+- **TX processors registered (18 total, emitting real I/Q since Phase 12)**: Tones (`PTON`), AudioBeep (`PABP`), SigGen (`PSIG`), AFSK (`PAFT`), FSK (`PFSK`), OOK (`POOK`), BTLE TX (`PBTT`), ADS-B TX (`PADT`), RDS (`PRDS`), MorseTX (`PMRT`), RTTY TX (`PRTT`), Jammer (`PJAM`), P25 TX (`P25T`), GPS Sim (`PGPS`), SpectrumPainter (`PSPT`), AudioTX (`PATX`), TimeSink (`PTSK`), EPIRB TX (`PEPT`). Output sinks selected via `--iq-tx-file=` (CS8) or `--iq-tx-soapy=<args>` (HackRF/Pluto/Lime/Blade).
+- **TX path (`IQSink`)**: mirror of `IQSource` — `NullIQSink` (default, silent), `FileIQSink` (CS8, byte-identical to the RX file format so round-trips work), `SoapyIQSink` (HackRF-class TX via `writeStream(SOAPY_SDR_TX, 0, ...)`). `baseband_dma_emu.cpp` is direction-aware: TX drains the previous filled slice to the sink on each `wait_for_buffer()`, with a final-flush in `disable()`. Tuning (sample rate, frequency, gain) forwards to both source and sink. Transmitted I/Q is also fanned out to connected rtl_tcp listeners so modulator output is visible in gqrx/SDR++ without extra hardware.
 - Clean startup and shutdown with no crashes or thread leaks
 
 ## What Doesn't Work Yet
 
-- **Windows** for rtl_tcp server/client and SD passthrough: POSIX sockets + POSIX filesystem headers only (needs Winsock2 + Win32 fs wrappers).
-- **App launch by name**: `--keys='UDS'` style sequences work, but no `--app=<name>` flag that launches a specific app bypassing menu navigation.
+Infrastructure is solid and most named Mayhem apps (spectrum, audio demodulators, and the 21 RX decoders / 18 TX modulators covered by the registry) now reach baseband. Remaining gaps grouped by rough effort.
+
+### Small / near-term
+
+- **Windows port**: rtl_tcp client + server and SD passthrough use POSIX-only headers (`<sys/socket.h>`, `<netdb.h>`, `<fcntl.h>`, `<sys/statvfs.h>`, `<fnmatch.h>`). Need Winsock2 + Win32 filesystem wrappers and a Windows CI build.
+- **`--app=<name>` flag**: launch a firmware app by name, bypassing menu navigation. Requires introspecting the app registry + synthesizing a `NavigationView::push_<T>()` call from main.
+- **Automated test harness**: `--headless --keys=...` enables scripted runs, but no scenarios are written yet — no per-app smoke tests, no framebuffer-hash regression suite, no CI integration.
+- **Crash artifacts**: signal handler prints a backtrace to stderr but doesn't write a crash dump file to disk.
+
+### Baseband processors — 30 of 55 still uncompiled
+
+Registered in `core_control_emu.cpp` today (25): WidebandSpectrum (`PSPE`), NarrowbandAMAudio (`PAMA`), NarrowbandFMAudio (`PNFM`), WidebandFMAudio (`PWFM`), POCSAG (`PPO2`), TPMS (`PTPM`), ERT (`PERT`), AIS (`PAIS`), Tones (`PTON`), AudioBeep (`PABP`), SigGen (`PSIG`), AFSK RX (`PAFR`), APRS RX (`PAPR`), BTLE RX (`PBTR`), NRF24 RX (`PNRR`), FSK RX (`PFSR`), Weather (`PWTH`), SubGhzD (`PSGD`), Protoview (`PPVW`), AFSK TX (`PAFT`), FSK TX (`PFSK`), OOK (`POOK`), BTLE TX (`PBTT`), ADS-B TX (`PADT`), RDS (`PRDS`). Still absent:
+
+- **RX**: ADS-B, ACARS, SSTV RX, WEFAX RX, NOAA APT RX, Sonde, EPIRB, MORSE, RTTY, FLEX, SubCar, TimeSink, ToneDetect, SigFRX, AM TV.
+- **TX**: EPIRB TX, P25 TX, Morse TX, RTTY TX, SSTV TX, BintStreamTX, MicTX, AudioTX, GPS sim, RDS (done), jammer, spectrum painter, OOK stream TX.
+- **Capture / replay**: `proc_capture`, `proc_replay` (need SD-card integration polish + `MultiDecimator` rename — same collision pattern as Phase 10's FSK_RX fix).
+- **Utility**: `proc_test`, `proc_flash_utility`, `proc_sd_over_usb`.
+
+Each new processor needs: the `.cpp` patched via `emuhem_strip_proc_main` (see CMakeLists.txt Phase 10 macro), support `.cpp` files added to CMake (baseband/ must be explicit; common/ is globbed), registered in `core_control_emu.cpp`. Watch for: PRALINE-pattern headers, 64-bit `unsigned long` assumptions, `constexpr size_t` at function scope that reads static class members, and global-scope class-name collisions like `MultiDecimator`.
+
+### Transmit path
+
+Hardware TX stubs are no-ops. There's no TX DMA, no modulator → RF path, no way to sink emitted samples anywhere (rtl_tcp server is receive-only today; no file TX sink either). Needed before any of the TX processors above become useful:
+
+- Bidirectional `baseband::dma` that accepts TX buffers from the firmware and routes them to an egress sink.
+- An `IQSink` abstraction mirroring `IQSource` (file writer, rtl_tcp-as-TX, loopback to RX for end-to-end tests).
+- `radio::disable_rf_output` / `enable_rf_output` plumbing.
+
+### Unfinished shims
+
+- **USB serial shell**: `usb_serial_device_to_host.h` is a stub — firmware's CLI / debug shell is unreachable from the emulator.
+- **Peripheral sensors**: battery gauge, temperature logger, I²C devices, antenna bias all return constants or no-op.
+- **CPLD upload** + **debug screen data sources** return zeros.
+- **Decorative only**: the bezel D-pad dots don't receive clicks; no status LEDs driven from firmware state.
+- **Input fidelity**: mouse wheel → encoder is coarse one-tick-per-notch; no acceleration or physical-feel tuning.
+- **Audio controls**: volume / mute UI changes reach persistent memory but round-trip to `SDL_AudioStream` gain/pause is not verified.
+
+### Polish
+
+- No font rendering on the bezel (no labels, no clock, no signal-strength indicator).
+- 240×320 LCD only — no higher-DPI "H2M" PortaPack variant.
+- Clang-only build; GCC/MSVC untested.
 
 ---
 
 ## Next Steps
 
-1. **Phase 6c (remaining)**: Windows SD passthrough + Winsock2 wrappers (needs a Windows test box).
-2. **Phase 7 (remaining)**: `--app=<name>` direct-launch flag, automated test harness on top of `--headless --keys=`.
+Pick the highest-leverage track for the intended use case:
+
+1. **More firmware apps** (most user-visible): add baseband processors in small batches, starting with SSB and capture/replay since they reuse the existing DSP helpers heavily.
+2. **TX path** (unblocks half the firmware): design and implement `IQSink` + bidirectional DMA; then enable one TX processor (e.g. `proc_tones`) as a proof of concept.
+3. **Windows port** (broadens audience): thin Winsock2 + Win32 FS wrappers behind the existing POSIX call sites.
+4. **Test harness** (keeps everything from rotting): write per-app scripted `--keys` scenarios with framebuffer hash assertions; wire into CI.
+5. **`--app=<name>` launch flag** (cheap, unblocks #4): bypass menu navigation for automated testing.

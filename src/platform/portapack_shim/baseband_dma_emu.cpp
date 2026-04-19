@@ -18,10 +18,12 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -36,7 +38,19 @@ std::atomic<uint32_t> g_sample_rate{0};  // 0 = unknown, fall back to fixed slee
 
 std::mutex g_source_mutex;
 std::unique_ptr<emuhem::IQSource> g_source;
+std::unique_ptr<emuhem::IQSink> g_sink;
 std::unique_ptr<emuhem::RtlTcpServer> g_server;
+
+// Direction set by firmware via configure(). RX: produce samples via
+// g_source and feed to the processor. TX: processor fills the buffer and
+// we drain it to g_sink.
+std::atomic<baseband::Direction> g_direction{baseband::Direction::Receive};
+
+// TX drain pipelining: the slice returned from wait_for_buffer() is filled
+// by the processor's execute() after we return. We therefore can only
+// drain the *previous* slice on the next call. Tracked here.
+baseband::sample_t* g_tx_pending_slice = nullptr;
+size_t g_tx_pending_count = 0;
 
 // Realtime pacing deadline. Reset by configure().
 std::chrono::steady_clock::time_point g_next_deadline{};
@@ -53,6 +67,13 @@ void ensure_source_locked() {
     if (!g_source) {
         g_source = emuhem::make_default_source();
         std::fprintf(stderr, "[EmuHem] baseband dma: source = %s\n", g_source->name());
+    }
+}
+
+void ensure_sink_locked() {
+    if (!g_sink) {
+        g_sink = emuhem::make_default_sink();
+        std::fprintf(stderr, "[EmuHem] baseband dma: sink = %s\n", g_sink->name());
     }
 }
 
@@ -99,11 +120,16 @@ void init() {
 
 void configure(
     baseband::sample_t* const /*buffer_base*/,
-    const baseband::Direction /*direction*/) {
+    const baseband::Direction direction) {
     // Use our internal buffer regardless of what firmware passes in.
     g_transfer_index = 0;
     std::memset(g_buffer.data(), 0, sizeof(g_buffer));
     g_deadline_valid = false;
+    g_direction.store(direction);
+    g_tx_pending_slice = nullptr;
+    g_tx_pending_count = 0;
+    std::fprintf(stderr, "[EmuHem] baseband dma: direction = %s\n",
+                 direction == baseband::Direction::Transmit ? "TX" : "RX");
 }
 
 void enable(const baseband::Direction /*direction*/) {
@@ -117,11 +143,46 @@ bool is_enabled() {
 void disable() {
     g_enabled.store(false);
     g_deadline_valid = false;
+
+    // Final TX flush: drain any pending slice the processor just filled so we
+    // don't lose the last 2048 samples on a fast stop.
+    if (g_direction.load() == baseband::Direction::Transmit && g_tx_pending_slice) {
+        std::lock_guard<std::mutex> lk(g_source_mutex);
+        ensure_sink_locked();
+        g_sink->write(g_tx_pending_slice, g_tx_pending_count);
+        g_tx_pending_slice = nullptr;
+        g_tx_pending_count = 0;
+    }
 }
 
 void preload_source() {
     std::lock_guard<std::mutex> lk(g_source_mutex);
     ensure_source_locked();
+    // Eagerly instantiate a TX sink when the user passed --iq-tx-* so the
+    // file is created (and the user sees the log line) before the first TX
+    // processor runs. Without this, a typo in --iq-tx-file would only
+    // surface after navigating into a TX app.
+    if (std::getenv("EMUHEM_IQ_TX_FILE") || std::getenv("EMUHEM_IQ_TX_SOAPY")) {
+        ensure_sink_locked();
+    }
+
+    // Diagnostic: EMUHEM_TX_TEST=<sample_count> exercises the TX pipeline at
+    // startup so the sink write path can be validated without launching a
+    // firmware TX app. Writes a ramp pattern (re=i, im=-i, wrapped to int8).
+    if (const char* spec = std::getenv("EMUHEM_TX_TEST"); spec && *spec) {
+        const size_t count = static_cast<size_t>(std::strtoul(spec, nullptr, 10));
+        if (count > 0) {
+            ensure_sink_locked();
+            std::vector<baseband::sample_t> ramp(count);
+            for (size_t i = 0; i < count; ++i) {
+                const int8_t re = static_cast<int8_t>((i * 3) & 0xFF);
+                const int8_t im = static_cast<int8_t>(-static_cast<int>(i * 5) & 0xFF);
+                ramp[i] = {re, im};
+            }
+            g_sink->write(ramp.data(), count);
+            std::fprintf(stderr, "[EmuHem] TX_TEST: wrote %zu ramp samples via sink\n", count);
+        }
+    }
 
     // Diagnostic: EMUHEM_NCO_TEST=<rate_hz>:<tuned_hz> drives the NCO hooks
     // at startup so the shift computation can be verified without launching
@@ -197,9 +258,10 @@ void set_sample_rate(uint32_t rate) {
     if (prev != rate) {
         std::fprintf(stderr, "[EmuHem] baseband dma: sample rate = %u Hz\n", rate);
         g_deadline_valid = false;
-        // Forward to the active source so network-backed sources re-tune.
+        // Forward to the active source AND sink so network-backed endpoints re-tune.
         std::lock_guard<std::mutex> lk(g_source_mutex);
         if (g_source) g_source->on_sample_rate_changed(rate);
+        if (g_sink) g_sink->on_sample_rate_changed(rate);
     }
 }
 
@@ -215,7 +277,26 @@ baseband::buffer_t wait_for_buffer() {
 
     auto* slice = &g_buffer[g_transfer_index * kTransferSamples];
 
-    {
+    if (g_direction.load() == baseband::Direction::Transmit) {
+        // TX: drain the previous slice (which the processor filled after our
+        // previous return) into the sink, then hand out a fresh zeroed slice
+        // for the processor to write into.
+        std::lock_guard<std::mutex> lk(g_source_mutex);
+        ensure_sink_locked();
+        if (g_tx_pending_slice) {
+            g_sink->write(g_tx_pending_slice, g_tx_pending_count);
+            // Also fan the transmitted I/Q to any rtl_tcp listeners — handy
+            // for visualizing our own TX output in gqrx/SDR++ without extra
+            // hardware.
+            if (g_server && g_server->has_clients()) {
+                g_server->push(g_tx_pending_slice, g_tx_pending_count);
+            }
+        }
+        std::memset(slice, 0, kTransferSamples * sizeof(baseband::sample_t));
+        g_tx_pending_slice = slice;
+        g_tx_pending_count = kTransferSamples;
+    } else {
+        // RX (unchanged): fill the slice from the source, fan to server.
         std::lock_guard<std::mutex> lk(g_source_mutex);
         ensure_source_locked();
         g_source->read(slice, kTransferSamples);
@@ -243,14 +324,19 @@ extern "C" void emuhem_baseband_set_sample_rate(uint32_t hz) {
     baseband::dma::set_sample_rate(hz);
 }
 
-// Forward tuning state from the radio shims to the active I/Q source so the
-// rtl_tcp client can push commands upstream.
+// Forward tuning state from the radio shims to the active I/Q source AND sink
+// so the rtl_tcp client / Soapy device on either end re-tunes.
 extern "C" void emuhem_iq_set_center_frequency(uint64_t hz) {
     std::lock_guard<std::mutex> lk(g_source_mutex);
     if (g_source) g_source->on_center_frequency_changed(hz);
+    if (g_sink) g_sink->on_center_frequency_changed(hz);
 }
 
 extern "C" void emuhem_iq_set_tuner_gain_tenths_db(int32_t tenths_db) {
     std::lock_guard<std::mutex> lk(g_source_mutex);
     if (g_source) g_source->on_tuner_gain_changed(tenths_db);
+    // Firmware does not distinguish TX gain from RX gain at this bridge — the
+    // direction is already latched in the baseband DMA. Forward the same
+    // value; TX sinks apply it to the TX chain, RX sources to the RX chain.
+    if (g_sink) g_sink->on_tx_gain_changed(tenths_db);
 }

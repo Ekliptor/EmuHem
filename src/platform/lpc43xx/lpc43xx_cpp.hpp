@@ -245,6 +245,12 @@ struct RTC {
     uint8_t hour() const { return (tv_time >> 16) & 0x01f; }
     uint8_t minute() const { return (tv_time >> 8) & 0x03f; }
     uint8_t second() const { return (tv_time >> 0) & 0x03f; }
+
+    // EmuHem: baseband packet builders (TPMS/ERT/AIS/POCSAG) stamp packets
+    // via Timestamp::now(). In firmware Timestamp is an M4-only struct; here
+    // Timestamp aliases RTC (via buffer.hpp's M0 branch), so provide now() on
+    // RTC itself, filling fields from the host wall clock.
+    static RTC now();
 };
 
 } /* namespace rtc */

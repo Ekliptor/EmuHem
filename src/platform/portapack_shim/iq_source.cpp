@@ -23,6 +23,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef EMUHEM_HAS_SOAPYSDR
+#include <SoapySDR/Device.hpp>
+#include <SoapySDR/Errors.hpp>
+#include <SoapySDR/Formats.hpp>
+#endif
+
 namespace emuhem {
 
 // ============================================================================
@@ -881,6 +887,494 @@ void FrequencyShiftingSource::recompute_phase_inc_locked() {
 }
 
 // ============================================================================
+// SoapyIQSource
+// ============================================================================
+
+#ifdef EMUHEM_HAS_SOAPYSDR
+
+namespace {
+constexpr size_t kSoapyRingCapacity = 262144;   // ~85 ms @ 3.072 MS/s
+constexpr size_t kSoapyChunkSamples = 4096;     // per readStream call
+}  // namespace
+
+struct SoapyIQSource::Impl {
+    SoapySDR::Device* device = nullptr;
+    SoapySDR::Stream* stream = nullptr;
+    std::string format;       // SOAPY_SDR_CS8 / CS16 / CF32
+    size_t bytes_per_sample = 2;  // interleaved complex pair
+};
+
+std::unique_ptr<SoapyIQSource> SoapyIQSource::open(const std::string& args,
+                                                   const OpenDefaults& defaults) {
+    auto impl = std::make_unique<Impl>();
+    try {
+        impl->device = SoapySDR::Device::make(args);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy: Device::make('%s') failed: %s\n",
+                     args.c_str(), e.what());
+        return nullptr;
+    }
+    if (!impl->device) {
+        std::fprintf(stderr, "[EmuHem] soapy: Device::make returned null for '%s'\n", args.c_str());
+        return nullptr;
+    }
+
+    // Pick the best format the device advertises.
+    std::vector<std::string> fmts;
+    try {
+        fmts = impl->device->getStreamFormats(SOAPY_SDR_RX, 0);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy: getStreamFormats failed: %s\n", e.what());
+        SoapySDR::Device::unmake(impl->device);
+        return nullptr;
+    }
+    auto has = [&](const char* f) {
+        return std::find(fmts.begin(), fmts.end(), f) != fmts.end();
+    };
+    if (has(SOAPY_SDR_CS8)) { impl->format = SOAPY_SDR_CS8; impl->bytes_per_sample = 2; }
+    else if (has(SOAPY_SDR_CS16)) { impl->format = SOAPY_SDR_CS16; impl->bytes_per_sample = 4; }
+    else if (has(SOAPY_SDR_CF32)) { impl->format = SOAPY_SDR_CF32; impl->bytes_per_sample = 8; }
+    else {
+        std::fprintf(stderr, "[EmuHem] soapy: no supported RX format (have:");
+        for (const auto& f : fmts) std::fprintf(stderr, " %s", f.c_str());
+        std::fprintf(stderr, ")\n");
+        SoapySDR::Device::unmake(impl->device);
+        return nullptr;
+    }
+
+    // Configure initial tuning before activating the stream.
+    try {
+        impl->device->setSampleRate(SOAPY_SDR_RX, 0, defaults.sample_rate_hz);
+        impl->device->setFrequency(SOAPY_SDR_RX, 0, defaults.frequency_hz);
+        impl->device->setGain(SOAPY_SDR_RX, 0, defaults.gain_db);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy: initial tuning failed: %s\n", e.what());
+        SoapySDR::Device::unmake(impl->device);
+        return nullptr;
+    }
+
+    try {
+        impl->stream = impl->device->setupStream(SOAPY_SDR_RX, impl->format);
+        impl->device->activateStream(impl->stream);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy: setupStream/activate failed: %s\n", e.what());
+        SoapySDR::Device::unmake(impl->device);
+        return nullptr;
+    }
+
+    auto src = std::unique_ptr<SoapyIQSource>(new SoapyIQSource());
+    src->impl_ = std::move(impl);
+    src->ring_.resize(kSoapyRingCapacity);
+    src->last_sample_rate_.store(static_cast<uint32_t>(defaults.sample_rate_hz));
+    src->last_frequency_.store(static_cast<uint64_t>(defaults.frequency_hz));
+    src->last_gain_.store(static_cast<int32_t>(defaults.gain_db * 10.0));
+
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "soapy(%s,%s,%.3f MS/s @ %.3f MHz)",
+                  args.empty() ? "default" : args.c_str(),
+                  src->impl_->format.c_str(),
+                  defaults.sample_rate_hz / 1.0e6,
+                  defaults.frequency_hz / 1.0e6);
+    src->display_name_ = buf;
+    std::fprintf(stderr, "[EmuHem] iq_source: %s\n", src->display_name_.c_str());
+
+    src->thread_ = std::thread([p = src.get()] { p->receiver_loop(); });
+    return src;
+}
+
+SoapyIQSource::~SoapyIQSource() {
+    stop_.store(true);
+    cv_.notify_all();
+    if (thread_.joinable()) thread_.join();
+    if (impl_ && impl_->device) {
+        if (impl_->stream) {
+            try { impl_->device->deactivateStream(impl_->stream); } catch (...) {}
+            try { impl_->device->closeStream(impl_->stream); } catch (...) {}
+        }
+        try { SoapySDR::Device::unmake(impl_->device); } catch (...) {}
+    }
+    const uint64_t dropped = dropped_samples_.load();
+    if (dropped > 0) {
+        std::fprintf(stderr, "[EmuHem] soapy: dropped %llu samples due to ring overflow\n",
+                     static_cast<unsigned long long>(dropped));
+    }
+}
+
+void SoapyIQSource::receiver_loop() {
+    // Scratch buffer sized for the largest format (CF32 = 8 bytes/sample).
+    std::vector<uint8_t> scratch(kSoapyChunkSamples * 8);
+
+    while (!stop_.load()) {
+        void* buffs[1] = {scratch.data()};
+        int flags = 0;
+        long long time_ns = 0;
+        const int ret = impl_->device->readStream(impl_->stream, buffs, kSoapyChunkSamples,
+                                                  flags, time_ns, 200000 /* us timeout */);
+        if (ret == SOAPY_SDR_TIMEOUT || ret == SOAPY_SDR_OVERFLOW) continue;
+        if (ret < 0) {
+            std::fprintf(stderr, "[EmuHem] soapy: readStream error: %s\n",
+                         SoapySDR::errToStr(ret));
+            // Short pause to avoid a tight error loop on a fatal error.
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            continue;
+        }
+        const size_t n = static_cast<size_t>(ret);
+
+        std::lock_guard<std::mutex> lk(mutex_);
+        for (size_t i = 0; i < n; ++i) {
+            int8_t ri = 0, qi = 0;
+            if (impl_->format == SOAPY_SDR_CS8) {
+                const int8_t* p = reinterpret_cast<const int8_t*>(scratch.data());
+                ri = p[2 * i];
+                qi = p[2 * i + 1];
+            } else if (impl_->format == SOAPY_SDR_CS16) {
+                const int16_t* p = reinterpret_cast<const int16_t*>(scratch.data());
+                ri = static_cast<int8_t>(p[2 * i] >> 8);
+                qi = static_cast<int8_t>(p[2 * i + 1] >> 8);
+            } else {  // CF32
+                const float* p = reinterpret_cast<const float*>(scratch.data());
+                auto clamp = [](float v) -> int8_t {
+                    v *= 127.0f;
+                    if (v > 127.0f) return 127;
+                    if (v < -127.0f) return -127;
+                    return static_cast<int8_t>(std::lround(v));
+                };
+                ri = clamp(p[2 * i]);
+                qi = clamp(p[2 * i + 1]);
+            }
+            if (count_ == ring_.size()) {
+                // Drop oldest.
+                tail_ = (tail_ + 1) % ring_.size();
+                --count_;
+                dropped_samples_.fetch_add(1, std::memory_order_relaxed);
+            }
+            ring_[head_] = {ri, qi};
+            head_ = (head_ + 1) % ring_.size();
+            ++count_;
+        }
+        cv_.notify_one();
+    }
+}
+
+size_t SoapyIQSource::read(complex8_t* out, size_t count) {
+    std::unique_lock<std::mutex> lk(mutex_);
+    size_t written = 0;
+    while (written < count && count_ > 0) {
+        out[written++] = ring_[tail_];
+        tail_ = (tail_ + 1) % ring_.size();
+        --count_;
+    }
+    // Zero-pad on under-run so DMA pacing stays steady.
+    for (size_t i = written; i < count; ++i) out[i] = {0, 0};
+    return count;
+}
+
+void SoapyIQSource::on_sample_rate_changed(uint32_t hz) {
+    if (hz == 0 || hz == last_sample_rate_.exchange(hz)) return;
+    try {
+        impl_->device->setSampleRate(SOAPY_SDR_RX, 0, static_cast<double>(hz));
+        std::fprintf(stderr, "[EmuHem] soapy: setSampleRate(%u)\n", hz);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy: setSampleRate(%u) failed: %s\n", hz, e.what());
+    }
+}
+
+void SoapyIQSource::on_center_frequency_changed(uint64_t hz) {
+    if (hz == 0 || hz == last_frequency_.exchange(hz)) return;
+    try {
+        impl_->device->setFrequency(SOAPY_SDR_RX, 0, static_cast<double>(hz));
+        std::fprintf(stderr, "[EmuHem] soapy: setFrequency(%llu)\n",
+                     static_cast<unsigned long long>(hz));
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy: setFrequency(%llu) failed: %s\n",
+                     static_cast<unsigned long long>(hz), e.what());
+    }
+}
+
+void SoapyIQSource::on_tuner_gain_changed(int32_t tenths_db) {
+    if (tenths_db == last_gain_.exchange(tenths_db)) return;
+    try {
+        impl_->device->setGain(SOAPY_SDR_RX, 0, tenths_db / 10.0);
+        std::fprintf(stderr, "[EmuHem] soapy: setGain(%.1f dB)\n", tenths_db / 10.0);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy: setGain(%.1f dB) failed: %s\n",
+                     tenths_db / 10.0, e.what());
+    }
+}
+
+#endif  // EMUHEM_HAS_SOAPYSDR
+
+// ============================================================================
+// IQSink implementations
+// ============================================================================
+
+void NullIQSink::write(const complex8_t* /*in*/, size_t count) {
+    dropped_samples_ += count;
+    if (dropped_samples_ >= next_log_at_) {
+        std::fprintf(stderr, "[EmuHem] iq_sink: %llu TX samples discarded (no sink attached)\n",
+                     static_cast<unsigned long long>(dropped_samples_));
+        next_log_at_ = dropped_samples_ + 1'000'000;
+    }
+}
+
+std::unique_ptr<FileIQSink> FileIQSink::open(const std::string& path) {
+    std::FILE* fp = std::fopen(path.c_str(), "wb");
+    if (!fp) {
+        std::fprintf(stderr, "[EmuHem] iq_sink: fopen(%s, wb) failed: %s\n",
+                     path.c_str(), std::strerror(errno));
+        return nullptr;
+    }
+    auto sink = std::unique_ptr<FileIQSink>(new FileIQSink{});
+    sink->fp_ = fp;
+    sink->display_name_ = "file:" + std::filesystem::path{path}.filename().string();
+    std::fprintf(stderr, "[EmuHem] iq_sink: writing CS8 TX samples to %s\n", path.c_str());
+    return sink;
+}
+
+FileIQSink::~FileIQSink() {
+    if (fp_) {
+        std::fflush(fp_);
+        std::fclose(fp_);
+        std::fprintf(stderr, "[EmuHem] iq_sink: %s closed (%llu bytes written)\n",
+                     display_name_.c_str(),
+                     static_cast<unsigned long long>(bytes_written_));
+    }
+}
+
+void FileIQSink::write(const complex8_t* in, size_t count) {
+    if (!fp_ || count == 0) return;
+    // complex8_t is layout-compatible with two int8s (re, im) — write raw.
+    const size_t wrote = std::fwrite(in, sizeof(complex8_t), count, fp_);
+    bytes_written_ += wrote * sizeof(complex8_t);
+    if (wrote != count) {
+        std::fprintf(stderr, "[EmuHem] iq_sink: short write to %s: %zu/%zu (%s)\n",
+                     display_name_.c_str(), wrote, count, std::strerror(errno));
+    }
+}
+
+#ifdef EMUHEM_HAS_SOAPYSDR
+
+namespace {
+constexpr size_t kSoapyTxRingCapacity = 262144;   // ~85 ms @ 3.072 MS/s
+constexpr size_t kSoapyTxChunkSamples = 4096;     // per writeStream call
+}  // namespace
+
+struct SoapyIQSink::Impl {
+    SoapySDR::Device* device = nullptr;
+    SoapySDR::Stream* stream = nullptr;
+    std::string format;
+};
+
+std::unique_ptr<SoapyIQSink> SoapyIQSink::open(const std::string& args,
+                                               const OpenDefaults& defaults) {
+    auto impl = std::make_unique<Impl>();
+    try {
+        impl->device = SoapySDR::Device::make(args);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: Device::make('%s') failed: %s\n",
+                     args.c_str(), e.what());
+        return nullptr;
+    }
+    if (!impl->device) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: Device::make returned null for '%s'\n", args.c_str());
+        return nullptr;
+    }
+
+    std::vector<std::string> fmts;
+    try {
+        fmts = impl->device->getStreamFormats(SOAPY_SDR_TX, 0);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: getStreamFormats failed: %s\n", e.what());
+        SoapySDR::Device::unmake(impl->device);
+        return nullptr;
+    }
+    auto has = [&](const char* f) {
+        return std::find(fmts.begin(), fmts.end(), f) != fmts.end();
+    };
+    if (has(SOAPY_SDR_CS8)) impl->format = SOAPY_SDR_CS8;
+    else if (has(SOAPY_SDR_CS16)) impl->format = SOAPY_SDR_CS16;
+    else if (has(SOAPY_SDR_CF32)) impl->format = SOAPY_SDR_CF32;
+    else {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: no supported TX format (have:");
+        for (const auto& f : fmts) std::fprintf(stderr, " %s", f.c_str());
+        std::fprintf(stderr, ")\n");
+        SoapySDR::Device::unmake(impl->device);
+        return nullptr;
+    }
+
+    try {
+        impl->device->setSampleRate(SOAPY_SDR_TX, 0, defaults.sample_rate_hz);
+        impl->device->setFrequency(SOAPY_SDR_TX, 0, defaults.frequency_hz);
+        impl->device->setGain(SOAPY_SDR_TX, 0, defaults.gain_db);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: initial tuning failed: %s\n", e.what());
+        SoapySDR::Device::unmake(impl->device);
+        return nullptr;
+    }
+
+    try {
+        impl->stream = impl->device->setupStream(SOAPY_SDR_TX, impl->format);
+        impl->device->activateStream(impl->stream);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: setupStream/activate failed: %s\n", e.what());
+        SoapySDR::Device::unmake(impl->device);
+        return nullptr;
+    }
+
+    auto sink = std::unique_ptr<SoapyIQSink>(new SoapyIQSink());
+    sink->impl_ = std::move(impl);
+    sink->ring_.resize(kSoapyTxRingCapacity);
+    sink->last_sample_rate_.store(static_cast<uint32_t>(defaults.sample_rate_hz));
+    sink->last_frequency_.store(static_cast<uint64_t>(defaults.frequency_hz));
+    sink->last_gain_.store(static_cast<int32_t>(defaults.gain_db * 10.0));
+
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "soapy_tx(%s,%s,%.3f MS/s @ %.3f MHz)",
+                  args.empty() ? "default" : args.c_str(),
+                  sink->impl_->format.c_str(),
+                  defaults.sample_rate_hz / 1.0e6,
+                  defaults.frequency_hz / 1.0e6);
+    sink->display_name_ = buf;
+    std::fprintf(stderr, "[EmuHem] iq_sink: %s\n", sink->display_name_.c_str());
+
+    sink->thread_ = std::thread([p = sink.get()] { p->writer_loop(); });
+    return sink;
+}
+
+SoapyIQSink::~SoapyIQSink() {
+    stop_.store(true);
+    cv_.notify_all();
+    if (thread_.joinable()) thread_.join();
+    if (impl_ && impl_->device) {
+        if (impl_->stream) {
+            try { impl_->device->deactivateStream(impl_->stream); } catch (...) {}
+            try { impl_->device->closeStream(impl_->stream); } catch (...) {}
+        }
+        try { SoapySDR::Device::unmake(impl_->device); } catch (...) {}
+    }
+    const uint64_t dropped = dropped_samples_.load();
+    if (dropped > 0) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: dropped %llu samples due to ring overflow\n",
+                     static_cast<unsigned long long>(dropped));
+    }
+}
+
+void SoapyIQSink::write(const complex8_t* in, size_t count) {
+    std::lock_guard<std::mutex> lk(mutex_);
+    for (size_t i = 0; i < count; ++i) {
+        if (count_ == ring_.size()) {
+            tail_ = (tail_ + 1) % ring_.size();
+            --count_;
+            dropped_samples_.fetch_add(1, std::memory_order_relaxed);
+        }
+        ring_[head_] = in[i];
+        head_ = (head_ + 1) % ring_.size();
+        ++count_;
+    }
+    cv_.notify_one();
+}
+
+void SoapyIQSink::writer_loop() {
+    // Scratch buffer sized for the largest format (CF32 = 8 bytes/sample).
+    std::vector<uint8_t> scratch(kSoapyTxChunkSamples * 8);
+
+    while (!stop_.load()) {
+        size_t take = 0;
+        {
+            std::unique_lock<std::mutex> lk(mutex_);
+            cv_.wait_for(lk, std::chrono::milliseconds(100), [&] {
+                return count_ > 0 || stop_.load();
+            });
+            if (stop_.load() && count_ == 0) break;
+            take = std::min(count_, kSoapyTxChunkSamples);
+            if (take == 0) continue;
+            // Encode into scratch in the chosen format.
+            if (impl_->format == SOAPY_SDR_CS8) {
+                auto* p = reinterpret_cast<int8_t*>(scratch.data());
+                for (size_t i = 0; i < take; ++i) {
+                    p[2 * i] = ring_[tail_].real();
+                    p[2 * i + 1] = ring_[tail_].imag();
+                    tail_ = (tail_ + 1) % ring_.size();
+                }
+            } else if (impl_->format == SOAPY_SDR_CS16) {
+                auto* p = reinterpret_cast<int16_t*>(scratch.data());
+                for (size_t i = 0; i < take; ++i) {
+                    p[2 * i] = static_cast<int16_t>(ring_[tail_].real()) << 8;
+                    p[2 * i + 1] = static_cast<int16_t>(ring_[tail_].imag()) << 8;
+                    tail_ = (tail_ + 1) % ring_.size();
+                }
+            } else {  // CF32
+                auto* p = reinterpret_cast<float*>(scratch.data());
+                for (size_t i = 0; i < take; ++i) {
+                    p[2 * i] = ring_[tail_].real() / 127.0f;
+                    p[2 * i + 1] = ring_[tail_].imag() / 127.0f;
+                    tail_ = (tail_ + 1) % ring_.size();
+                }
+            }
+            count_ -= take;
+        }
+
+        const void* buffs[1] = {scratch.data()};
+        int flags = 0;
+        const int ret = impl_->device->writeStream(impl_->stream, buffs, take,
+                                                   flags, 0, 200000 /* us timeout */);
+        if (ret == SOAPY_SDR_TIMEOUT) continue;
+        if (ret < 0) {
+            std::fprintf(stderr, "[EmuHem] soapy_tx: writeStream error: %s\n",
+                         SoapySDR::errToStr(ret));
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            continue;
+        }
+        if (static_cast<size_t>(ret) < take) {
+            // Partial write: requeue the tail. Simpler: log once and drop —
+            // Soapy rarely does partial writes in TX, and dropping a few ms
+            // of samples is better than a complicated requeue path.
+            static bool warned = false;
+            if (!warned) {
+                std::fprintf(stderr, "[EmuHem] soapy_tx: partial writeStream (%d/%zu)\n",
+                             ret, take);
+                warned = true;
+            }
+        }
+    }
+}
+
+void SoapyIQSink::on_sample_rate_changed(uint32_t hz) {
+    if (hz == 0 || hz == last_sample_rate_.exchange(hz)) return;
+    try {
+        impl_->device->setSampleRate(SOAPY_SDR_TX, 0, static_cast<double>(hz));
+        std::fprintf(stderr, "[EmuHem] soapy_tx: setSampleRate(%u)\n", hz);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: setSampleRate(%u) failed: %s\n", hz, e.what());
+    }
+}
+
+void SoapyIQSink::on_center_frequency_changed(uint64_t hz) {
+    if (hz == 0 || hz == last_frequency_.exchange(hz)) return;
+    try {
+        impl_->device->setFrequency(SOAPY_SDR_TX, 0, static_cast<double>(hz));
+        std::fprintf(stderr, "[EmuHem] soapy_tx: setFrequency(%llu)\n",
+                     static_cast<unsigned long long>(hz));
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: setFrequency(%llu) failed: %s\n",
+                     static_cast<unsigned long long>(hz), e.what());
+    }
+}
+
+void SoapyIQSink::on_tx_gain_changed(int32_t tenths_db) {
+    if (tenths_db == last_gain_.exchange(tenths_db)) return;
+    try {
+        impl_->device->setGain(SOAPY_SDR_TX, 0, tenths_db / 10.0);
+        std::fprintf(stderr, "[EmuHem] soapy_tx: setGain(%.1f dB)\n", tenths_db / 10.0);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[EmuHem] soapy_tx: setGain(%.1f dB) failed: %s\n",
+                     tenths_db / 10.0, e.what());
+    }
+}
+
+#endif  // EMUHEM_HAS_SOAPYSDR
+
+// ============================================================================
 // Factory
 // ============================================================================
 
@@ -924,6 +1418,27 @@ std::unique_ptr<IQSource> make_default_source() {
         }
     }
     if (!base) {
+        if (const char* soapy = std::getenv("EMUHEM_IQ_SOAPY"); soapy && *soapy) {
+#ifdef EMUHEM_HAS_SOAPYSDR
+            SoapyIQSource::OpenDefaults d;
+            if (const char* e = std::getenv("EMUHEM_IQ_SOAPY_RATE"); e && *e)
+                d.sample_rate_hz = std::strtod(e, nullptr);
+            if (const char* e = std::getenv("EMUHEM_IQ_SOAPY_FREQ"); e && *e)
+                d.frequency_hz = std::strtod(e, nullptr);
+            if (const char* e = std::getenv("EMUHEM_IQ_SOAPY_GAIN"); e && *e)
+                d.gain_db = std::strtol(e, nullptr, 10) / 10.0;
+            if (auto src = SoapyIQSource::open(soapy, d)) {
+                base = std::move(src);
+                is_network_tuned = true;
+            } else {
+                std::fprintf(stderr, "[EmuHem] iq_source: falling back after SoapySDR open failure\n");
+            }
+#else
+            std::fprintf(stderr, "[EmuHem] iq_source: EMUHEM_IQ_SOAPY set but SoapySDR support not compiled in (brew install soapysdr, then rebuild)\n");
+#endif
+        }
+    }
+    if (!base) {
         if (const char* tcp = std::getenv("EMUHEM_IQ_TCP"); tcp && *tcp) {
             if (auto hp = parse_host_port(tcp)) {
                 if (auto src = RtlTcpClientSource::open(hp->first, hp->second)) {
@@ -952,6 +1467,33 @@ std::unique_ptr<IQSource> make_default_source() {
         }
     }
     return base;
+}
+
+std::unique_ptr<IQSink> make_default_sink() {
+    if (const char* path = std::getenv("EMUHEM_IQ_TX_FILE"); path && *path) {
+        if (auto s = FileIQSink::open(path)) {
+            return s;
+        }
+        std::fprintf(stderr, "[EmuHem] iq_sink: falling back after file open failure\n");
+    }
+    if (const char* soapy = std::getenv("EMUHEM_IQ_TX_SOAPY"); soapy && *soapy) {
+#ifdef EMUHEM_HAS_SOAPYSDR
+        SoapyIQSink::OpenDefaults d;
+        if (const char* e = std::getenv("EMUHEM_IQ_TX_SOAPY_RATE"); e && *e)
+            d.sample_rate_hz = std::strtod(e, nullptr);
+        if (const char* e = std::getenv("EMUHEM_IQ_TX_SOAPY_FREQ"); e && *e)
+            d.frequency_hz = std::strtod(e, nullptr);
+        if (const char* e = std::getenv("EMUHEM_IQ_TX_SOAPY_GAIN"); e && *e)
+            d.gain_db = std::strtol(e, nullptr, 10) / 10.0;
+        if (auto s = SoapyIQSink::open(soapy, d)) {
+            return s;
+        }
+        std::fprintf(stderr, "[EmuHem] iq_sink: falling back after SoapySDR open failure\n");
+#else
+        std::fprintf(stderr, "[EmuHem] iq_sink: EMUHEM_IQ_TX_SOAPY set but SoapySDR support not compiled in\n");
+#endif
+    }
+    return std::make_unique<NullIQSink>();
 }
 
 std::unique_ptr<RtlTcpServer> make_default_server() {

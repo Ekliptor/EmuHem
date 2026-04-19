@@ -4785,6 +4785,54 @@ mayhem-firmware/firmware/baseband/baseband_thread.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/baseband_thread.cpp.s
 .PHONY : mayhem-firmware/firmware/baseband/baseband_thread.cpp.s
 
+mayhem-firmware/firmware/baseband/channel_decimator.o: mayhem-firmware/firmware/baseband/channel_decimator.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/channel_decimator.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/channel_decimator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/channel_decimator.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/channel_decimator.cpp.o
+
+mayhem-firmware/firmware/baseband/channel_decimator.i: mayhem-firmware/firmware/baseband/channel_decimator.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/channel_decimator.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/channel_decimator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/channel_decimator.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/channel_decimator.cpp.i
+
+mayhem-firmware/firmware/baseband/channel_decimator.s: mayhem-firmware/firmware/baseband/channel_decimator.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/channel_decimator.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/channel_decimator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/channel_decimator.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/channel_decimator.cpp.s
+
+mayhem-firmware/firmware/baseband/clock_recovery.o: mayhem-firmware/firmware/baseband/clock_recovery.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/clock_recovery.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/clock_recovery.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/clock_recovery.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/clock_recovery.cpp.o
+
+mayhem-firmware/firmware/baseband/clock_recovery.i: mayhem-firmware/firmware/baseband/clock_recovery.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/clock_recovery.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/clock_recovery.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/clock_recovery.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/clock_recovery.cpp.i
+
+mayhem-firmware/firmware/baseband/clock_recovery.s: mayhem-firmware/firmware/baseband/clock_recovery.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/clock_recovery.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/clock_recovery.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/clock_recovery.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/clock_recovery.cpp.s
+
 mayhem-firmware/firmware/baseband/dsp_decimate.o: mayhem-firmware/firmware/baseband/dsp_decimate.cpp.o
 .PHONY : mayhem-firmware/firmware/baseband/dsp_decimate.o
 
@@ -4881,6 +4929,54 @@ mayhem-firmware/firmware/baseband/dsp_modulate.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/dsp_modulate.cpp.s
 .PHONY : mayhem-firmware/firmware/baseband/dsp_modulate.cpp.s
 
+mayhem-firmware/firmware/baseband/matched_filter.o: mayhem-firmware/firmware/baseband/matched_filter.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/matched_filter.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/matched_filter.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/matched_filter.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/matched_filter.cpp.o
+
+mayhem-firmware/firmware/baseband/matched_filter.i: mayhem-firmware/firmware/baseband/matched_filter.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/matched_filter.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/matched_filter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/matched_filter.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/matched_filter.cpp.i
+
+mayhem-firmware/firmware/baseband/matched_filter.s: mayhem-firmware/firmware/baseband/matched_filter.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/matched_filter.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/matched_filter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/matched_filter.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/matched_filter.cpp.s
+
+mayhem-firmware/firmware/baseband/packet_builder.o: mayhem-firmware/firmware/baseband/packet_builder.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/packet_builder.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/packet_builder.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/packet_builder.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/packet_builder.cpp.o
+
+mayhem-firmware/firmware/baseband/packet_builder.i: mayhem-firmware/firmware/baseband/packet_builder.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/packet_builder.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/packet_builder.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/packet_builder.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/packet_builder.cpp.i
+
+mayhem-firmware/firmware/baseband/packet_builder.s: mayhem-firmware/firmware/baseband/packet_builder.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/packet_builder.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/packet_builder.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/packet_builder.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/packet_builder.cpp.s
+
 mayhem-firmware/firmware/baseband/rssi_thread.o: mayhem-firmware/firmware/baseband/rssi_thread.cpp.o
 .PHONY : mayhem-firmware/firmware/baseband/rssi_thread.o
 
@@ -4904,6 +5000,30 @@ mayhem-firmware/firmware/baseband/rssi_thread.s: mayhem-firmware/firmware/baseba
 mayhem-firmware/firmware/baseband/rssi_thread.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/rssi_thread.cpp.s
 .PHONY : mayhem-firmware/firmware/baseband/rssi_thread.cpp.s
+
+mayhem-firmware/firmware/baseband/stream_input.o: mayhem-firmware/firmware/baseband/stream_input.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/stream_input.o
+
+# target to build an object file
+mayhem-firmware/firmware/baseband/stream_input.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/stream_input.cpp.o
+.PHONY : mayhem-firmware/firmware/baseband/stream_input.cpp.o
+
+mayhem-firmware/firmware/baseband/stream_input.i: mayhem-firmware/firmware/baseband/stream_input.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/stream_input.i
+
+# target to preprocess a source file
+mayhem-firmware/firmware/baseband/stream_input.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/stream_input.cpp.i
+.PHONY : mayhem-firmware/firmware/baseband/stream_input.cpp.i
+
+mayhem-firmware/firmware/baseband/stream_input.s: mayhem-firmware/firmware/baseband/stream_input.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/stream_input.s
+
+# target to generate assembly for a file
+mayhem-firmware/firmware/baseband/stream_input.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/baseband/stream_input.cpp.s
+.PHONY : mayhem-firmware/firmware/baseband/stream_input.cpp.s
 
 mayhem-firmware/firmware/common/adsb.o: mayhem-firmware/firmware/common/adsb.cpp.o
 .PHONY : mayhem-firmware/firmware/common/adsb.o
@@ -5288,30 +5408,6 @@ mayhem-firmware/firmware/common/event.s: mayhem-firmware/firmware/common/event.c
 mayhem-firmware/firmware/common/event.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/common/event.cpp.s
 .PHONY : mayhem-firmware/firmware/common/event.cpp.s
-
-mayhem-firmware/firmware/common/gcc.o: mayhem-firmware/firmware/common/gcc.cpp.o
-.PHONY : mayhem-firmware/firmware/common/gcc.o
-
-# target to build an object file
-mayhem-firmware/firmware/common/gcc.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/common/gcc.cpp.o
-.PHONY : mayhem-firmware/firmware/common/gcc.cpp.o
-
-mayhem-firmware/firmware/common/gcc.i: mayhem-firmware/firmware/common/gcc.cpp.i
-.PHONY : mayhem-firmware/firmware/common/gcc.i
-
-# target to preprocess a source file
-mayhem-firmware/firmware/common/gcc.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/common/gcc.cpp.i
-.PHONY : mayhem-firmware/firmware/common/gcc.cpp.i
-
-mayhem-firmware/firmware/common/gcc.s: mayhem-firmware/firmware/common/gcc.cpp.s
-.PHONY : mayhem-firmware/firmware/common/gcc.s
-
-# target to generate assembly for a file
-mayhem-firmware/firmware/common/gcc.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/mayhem-firmware/firmware/common/gcc.cpp.s
-.PHONY : mayhem-firmware/firmware/common/gcc.cpp.s
 
 mayhem-firmware/firmware/common/i2cdev_ads1110.o: mayhem-firmware/firmware/common/i2cdev_ads1110.cpp.o
 .PHONY : mayhem-firmware/firmware/common/i2cdev_ads1110.o
@@ -6033,6 +6129,150 @@ patched_fw/event_m4.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/event_m4.cpp.s
 .PHONY : patched_fw/event_m4.cpp.s
 
+patched_fw/proc_acars.o: patched_fw/proc_acars.cpp.o
+.PHONY : patched_fw/proc_acars.o
+
+# target to build an object file
+patched_fw/proc_acars.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_acars.cpp.o
+.PHONY : patched_fw/proc_acars.cpp.o
+
+patched_fw/proc_acars.i: patched_fw/proc_acars.cpp.i
+.PHONY : patched_fw/proc_acars.i
+
+# target to preprocess a source file
+patched_fw/proc_acars.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_acars.cpp.i
+.PHONY : patched_fw/proc_acars.cpp.i
+
+patched_fw/proc_acars.s: patched_fw/proc_acars.cpp.s
+.PHONY : patched_fw/proc_acars.s
+
+# target to generate assembly for a file
+patched_fw/proc_acars.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_acars.cpp.s
+.PHONY : patched_fw/proc_acars.cpp.s
+
+patched_fw/proc_adsbrx.o: patched_fw/proc_adsbrx.cpp.o
+.PHONY : patched_fw/proc_adsbrx.o
+
+# target to build an object file
+patched_fw/proc_adsbrx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_adsbrx.cpp.o
+.PHONY : patched_fw/proc_adsbrx.cpp.o
+
+patched_fw/proc_adsbrx.i: patched_fw/proc_adsbrx.cpp.i
+.PHONY : patched_fw/proc_adsbrx.i
+
+# target to preprocess a source file
+patched_fw/proc_adsbrx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_adsbrx.cpp.i
+.PHONY : patched_fw/proc_adsbrx.cpp.i
+
+patched_fw/proc_adsbrx.s: patched_fw/proc_adsbrx.cpp.s
+.PHONY : patched_fw/proc_adsbrx.s
+
+# target to generate assembly for a file
+patched_fw/proc_adsbrx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_adsbrx.cpp.s
+.PHONY : patched_fw/proc_adsbrx.cpp.s
+
+patched_fw/proc_adsbtx.o: patched_fw/proc_adsbtx.cpp.o
+.PHONY : patched_fw/proc_adsbtx.o
+
+# target to build an object file
+patched_fw/proc_adsbtx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_adsbtx.cpp.o
+.PHONY : patched_fw/proc_adsbtx.cpp.o
+
+patched_fw/proc_adsbtx.i: patched_fw/proc_adsbtx.cpp.i
+.PHONY : patched_fw/proc_adsbtx.i
+
+# target to preprocess a source file
+patched_fw/proc_adsbtx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_adsbtx.cpp.i
+.PHONY : patched_fw/proc_adsbtx.cpp.i
+
+patched_fw/proc_adsbtx.s: patched_fw/proc_adsbtx.cpp.s
+.PHONY : patched_fw/proc_adsbtx.s
+
+# target to generate assembly for a file
+patched_fw/proc_adsbtx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_adsbtx.cpp.s
+.PHONY : patched_fw/proc_adsbtx.cpp.s
+
+patched_fw/proc_afsk.o: patched_fw/proc_afsk.cpp.o
+.PHONY : patched_fw/proc_afsk.o
+
+# target to build an object file
+patched_fw/proc_afsk.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_afsk.cpp.o
+.PHONY : patched_fw/proc_afsk.cpp.o
+
+patched_fw/proc_afsk.i: patched_fw/proc_afsk.cpp.i
+.PHONY : patched_fw/proc_afsk.i
+
+# target to preprocess a source file
+patched_fw/proc_afsk.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_afsk.cpp.i
+.PHONY : patched_fw/proc_afsk.cpp.i
+
+patched_fw/proc_afsk.s: patched_fw/proc_afsk.cpp.s
+.PHONY : patched_fw/proc_afsk.s
+
+# target to generate assembly for a file
+patched_fw/proc_afsk.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_afsk.cpp.s
+.PHONY : patched_fw/proc_afsk.cpp.s
+
+patched_fw/proc_afskrx.o: patched_fw/proc_afskrx.cpp.o
+.PHONY : patched_fw/proc_afskrx.o
+
+# target to build an object file
+patched_fw/proc_afskrx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_afskrx.cpp.o
+.PHONY : patched_fw/proc_afskrx.cpp.o
+
+patched_fw/proc_afskrx.i: patched_fw/proc_afskrx.cpp.i
+.PHONY : patched_fw/proc_afskrx.i
+
+# target to preprocess a source file
+patched_fw/proc_afskrx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_afskrx.cpp.i
+.PHONY : patched_fw/proc_afskrx.cpp.i
+
+patched_fw/proc_afskrx.s: patched_fw/proc_afskrx.cpp.s
+.PHONY : patched_fw/proc_afskrx.s
+
+# target to generate assembly for a file
+patched_fw/proc_afskrx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_afskrx.cpp.s
+.PHONY : patched_fw/proc_afskrx.cpp.s
+
+patched_fw/proc_ais.o: patched_fw/proc_ais.cpp.o
+.PHONY : patched_fw/proc_ais.o
+
+# target to build an object file
+patched_fw/proc_ais.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ais.cpp.o
+.PHONY : patched_fw/proc_ais.cpp.o
+
+patched_fw/proc_ais.i: patched_fw/proc_ais.cpp.i
+.PHONY : patched_fw/proc_ais.i
+
+# target to preprocess a source file
+patched_fw/proc_ais.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ais.cpp.i
+.PHONY : patched_fw/proc_ais.cpp.i
+
+patched_fw/proc_ais.s: patched_fw/proc_ais.cpp.s
+.PHONY : patched_fw/proc_ais.s
+
+# target to generate assembly for a file
+patched_fw/proc_ais.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ais.cpp.s
+.PHONY : patched_fw/proc_ais.cpp.s
+
 patched_fw/proc_am_audio.o: patched_fw/proc_am_audio.cpp.o
 .PHONY : patched_fw/proc_am_audio.o
 
@@ -6057,6 +6297,366 @@ patched_fw/proc_am_audio.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_am_audio.cpp.s
 .PHONY : patched_fw/proc_am_audio.cpp.s
 
+patched_fw/proc_aprsrx.o: patched_fw/proc_aprsrx.cpp.o
+.PHONY : patched_fw/proc_aprsrx.o
+
+# target to build an object file
+patched_fw/proc_aprsrx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_aprsrx.cpp.o
+.PHONY : patched_fw/proc_aprsrx.cpp.o
+
+patched_fw/proc_aprsrx.i: patched_fw/proc_aprsrx.cpp.i
+.PHONY : patched_fw/proc_aprsrx.i
+
+# target to preprocess a source file
+patched_fw/proc_aprsrx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_aprsrx.cpp.i
+.PHONY : patched_fw/proc_aprsrx.cpp.i
+
+patched_fw/proc_aprsrx.s: patched_fw/proc_aprsrx.cpp.s
+.PHONY : patched_fw/proc_aprsrx.s
+
+# target to generate assembly for a file
+patched_fw/proc_aprsrx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_aprsrx.cpp.s
+.PHONY : patched_fw/proc_aprsrx.cpp.s
+
+patched_fw/proc_audio_beep.o: patched_fw/proc_audio_beep.cpp.o
+.PHONY : patched_fw/proc_audio_beep.o
+
+# target to build an object file
+patched_fw/proc_audio_beep.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_audio_beep.cpp.o
+.PHONY : patched_fw/proc_audio_beep.cpp.o
+
+patched_fw/proc_audio_beep.i: patched_fw/proc_audio_beep.cpp.i
+.PHONY : patched_fw/proc_audio_beep.i
+
+# target to preprocess a source file
+patched_fw/proc_audio_beep.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_audio_beep.cpp.i
+.PHONY : patched_fw/proc_audio_beep.cpp.i
+
+patched_fw/proc_audio_beep.s: patched_fw/proc_audio_beep.cpp.s
+.PHONY : patched_fw/proc_audio_beep.s
+
+# target to generate assembly for a file
+patched_fw/proc_audio_beep.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_audio_beep.cpp.s
+.PHONY : patched_fw/proc_audio_beep.cpp.s
+
+patched_fw/proc_audiotx.o: patched_fw/proc_audiotx.cpp.o
+.PHONY : patched_fw/proc_audiotx.o
+
+# target to build an object file
+patched_fw/proc_audiotx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_audiotx.cpp.o
+.PHONY : patched_fw/proc_audiotx.cpp.o
+
+patched_fw/proc_audiotx.i: patched_fw/proc_audiotx.cpp.i
+.PHONY : patched_fw/proc_audiotx.i
+
+# target to preprocess a source file
+patched_fw/proc_audiotx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_audiotx.cpp.i
+.PHONY : patched_fw/proc_audiotx.cpp.i
+
+patched_fw/proc_audiotx.s: patched_fw/proc_audiotx.cpp.s
+.PHONY : patched_fw/proc_audiotx.s
+
+# target to generate assembly for a file
+patched_fw/proc_audiotx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_audiotx.cpp.s
+.PHONY : patched_fw/proc_audiotx.cpp.s
+
+patched_fw/proc_ble_tx.o: patched_fw/proc_ble_tx.cpp.o
+.PHONY : patched_fw/proc_ble_tx.o
+
+# target to build an object file
+patched_fw/proc_ble_tx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ble_tx.cpp.o
+.PHONY : patched_fw/proc_ble_tx.cpp.o
+
+patched_fw/proc_ble_tx.i: patched_fw/proc_ble_tx.cpp.i
+.PHONY : patched_fw/proc_ble_tx.i
+
+# target to preprocess a source file
+patched_fw/proc_ble_tx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ble_tx.cpp.i
+.PHONY : patched_fw/proc_ble_tx.cpp.i
+
+patched_fw/proc_ble_tx.s: patched_fw/proc_ble_tx.cpp.s
+.PHONY : patched_fw/proc_ble_tx.s
+
+# target to generate assembly for a file
+patched_fw/proc_ble_tx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ble_tx.cpp.s
+.PHONY : patched_fw/proc_ble_tx.cpp.s
+
+patched_fw/proc_btlerx.o: patched_fw/proc_btlerx.cpp.o
+.PHONY : patched_fw/proc_btlerx.o
+
+# target to build an object file
+patched_fw/proc_btlerx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_btlerx.cpp.o
+.PHONY : patched_fw/proc_btlerx.cpp.o
+
+patched_fw/proc_btlerx.i: patched_fw/proc_btlerx.cpp.i
+.PHONY : patched_fw/proc_btlerx.i
+
+# target to preprocess a source file
+patched_fw/proc_btlerx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_btlerx.cpp.i
+.PHONY : patched_fw/proc_btlerx.cpp.i
+
+patched_fw/proc_btlerx.s: patched_fw/proc_btlerx.cpp.s
+.PHONY : patched_fw/proc_btlerx.s
+
+# target to generate assembly for a file
+patched_fw/proc_btlerx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_btlerx.cpp.s
+.PHONY : patched_fw/proc_btlerx.cpp.s
+
+patched_fw/proc_epirb.o: patched_fw/proc_epirb.cpp.o
+.PHONY : patched_fw/proc_epirb.o
+
+# target to build an object file
+patched_fw/proc_epirb.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_epirb.cpp.o
+.PHONY : patched_fw/proc_epirb.cpp.o
+
+patched_fw/proc_epirb.i: patched_fw/proc_epirb.cpp.i
+.PHONY : patched_fw/proc_epirb.i
+
+# target to preprocess a source file
+patched_fw/proc_epirb.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_epirb.cpp.i
+.PHONY : patched_fw/proc_epirb.cpp.i
+
+patched_fw/proc_epirb.s: patched_fw/proc_epirb.cpp.s
+.PHONY : patched_fw/proc_epirb.s
+
+# target to generate assembly for a file
+patched_fw/proc_epirb.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_epirb.cpp.s
+.PHONY : patched_fw/proc_epirb.cpp.s
+
+patched_fw/proc_epirb_tx.o: patched_fw/proc_epirb_tx.cpp.o
+.PHONY : patched_fw/proc_epirb_tx.o
+
+# target to build an object file
+patched_fw/proc_epirb_tx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_epirb_tx.cpp.o
+.PHONY : patched_fw/proc_epirb_tx.cpp.o
+
+patched_fw/proc_epirb_tx.i: patched_fw/proc_epirb_tx.cpp.i
+.PHONY : patched_fw/proc_epirb_tx.i
+
+# target to preprocess a source file
+patched_fw/proc_epirb_tx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_epirb_tx.cpp.i
+.PHONY : patched_fw/proc_epirb_tx.cpp.i
+
+patched_fw/proc_epirb_tx.s: patched_fw/proc_epirb_tx.cpp.s
+.PHONY : patched_fw/proc_epirb_tx.s
+
+# target to generate assembly for a file
+patched_fw/proc_epirb_tx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_epirb_tx.cpp.s
+.PHONY : patched_fw/proc_epirb_tx.cpp.s
+
+patched_fw/proc_ert.o: patched_fw/proc_ert.cpp.o
+.PHONY : patched_fw/proc_ert.o
+
+# target to build an object file
+patched_fw/proc_ert.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ert.cpp.o
+.PHONY : patched_fw/proc_ert.cpp.o
+
+patched_fw/proc_ert.i: patched_fw/proc_ert.cpp.i
+.PHONY : patched_fw/proc_ert.i
+
+# target to preprocess a source file
+patched_fw/proc_ert.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ert.cpp.i
+.PHONY : patched_fw/proc_ert.cpp.i
+
+patched_fw/proc_ert.s: patched_fw/proc_ert.cpp.s
+.PHONY : patched_fw/proc_ert.s
+
+# target to generate assembly for a file
+patched_fw/proc_ert.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ert.cpp.s
+.PHONY : patched_fw/proc_ert.cpp.s
+
+patched_fw/proc_flex.o: patched_fw/proc_flex.cpp.o
+.PHONY : patched_fw/proc_flex.o
+
+# target to build an object file
+patched_fw/proc_flex.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_flex.cpp.o
+.PHONY : patched_fw/proc_flex.cpp.o
+
+patched_fw/proc_flex.i: patched_fw/proc_flex.cpp.i
+.PHONY : patched_fw/proc_flex.i
+
+# target to preprocess a source file
+patched_fw/proc_flex.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_flex.cpp.i
+.PHONY : patched_fw/proc_flex.cpp.i
+
+patched_fw/proc_flex.s: patched_fw/proc_flex.cpp.s
+.PHONY : patched_fw/proc_flex.s
+
+# target to generate assembly for a file
+patched_fw/proc_flex.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_flex.cpp.s
+.PHONY : patched_fw/proc_flex.cpp.s
+
+patched_fw/proc_fsk.o: patched_fw/proc_fsk.cpp.o
+.PHONY : patched_fw/proc_fsk.o
+
+# target to build an object file
+patched_fw/proc_fsk.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_fsk.cpp.o
+.PHONY : patched_fw/proc_fsk.cpp.o
+
+patched_fw/proc_fsk.i: patched_fw/proc_fsk.cpp.i
+.PHONY : patched_fw/proc_fsk.i
+
+# target to preprocess a source file
+patched_fw/proc_fsk.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_fsk.cpp.i
+.PHONY : patched_fw/proc_fsk.cpp.i
+
+patched_fw/proc_fsk.s: patched_fw/proc_fsk.cpp.s
+.PHONY : patched_fw/proc_fsk.s
+
+# target to generate assembly for a file
+patched_fw/proc_fsk.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_fsk.cpp.s
+.PHONY : patched_fw/proc_fsk.cpp.s
+
+patched_fw/proc_fsk_rx.o: patched_fw/proc_fsk_rx.cpp.o
+.PHONY : patched_fw/proc_fsk_rx.o
+
+# target to build an object file
+patched_fw/proc_fsk_rx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_fsk_rx.cpp.o
+.PHONY : patched_fw/proc_fsk_rx.cpp.o
+
+patched_fw/proc_fsk_rx.i: patched_fw/proc_fsk_rx.cpp.i
+.PHONY : patched_fw/proc_fsk_rx.i
+
+# target to preprocess a source file
+patched_fw/proc_fsk_rx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_fsk_rx.cpp.i
+.PHONY : patched_fw/proc_fsk_rx.cpp.i
+
+patched_fw/proc_fsk_rx.s: patched_fw/proc_fsk_rx.cpp.s
+.PHONY : patched_fw/proc_fsk_rx.s
+
+# target to generate assembly for a file
+patched_fw/proc_fsk_rx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_fsk_rx.cpp.s
+.PHONY : patched_fw/proc_fsk_rx.cpp.s
+
+patched_fw/proc_gps_sim.o: patched_fw/proc_gps_sim.cpp.o
+.PHONY : patched_fw/proc_gps_sim.o
+
+# target to build an object file
+patched_fw/proc_gps_sim.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_gps_sim.cpp.o
+.PHONY : patched_fw/proc_gps_sim.cpp.o
+
+patched_fw/proc_gps_sim.i: patched_fw/proc_gps_sim.cpp.i
+.PHONY : patched_fw/proc_gps_sim.i
+
+# target to preprocess a source file
+patched_fw/proc_gps_sim.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_gps_sim.cpp.i
+.PHONY : patched_fw/proc_gps_sim.cpp.i
+
+patched_fw/proc_gps_sim.s: patched_fw/proc_gps_sim.cpp.s
+.PHONY : patched_fw/proc_gps_sim.s
+
+# target to generate assembly for a file
+patched_fw/proc_gps_sim.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_gps_sim.cpp.s
+.PHONY : patched_fw/proc_gps_sim.cpp.s
+
+patched_fw/proc_jammer.o: patched_fw/proc_jammer.cpp.o
+.PHONY : patched_fw/proc_jammer.o
+
+# target to build an object file
+patched_fw/proc_jammer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_jammer.cpp.o
+.PHONY : patched_fw/proc_jammer.cpp.o
+
+patched_fw/proc_jammer.i: patched_fw/proc_jammer.cpp.i
+.PHONY : patched_fw/proc_jammer.i
+
+# target to preprocess a source file
+patched_fw/proc_jammer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_jammer.cpp.i
+.PHONY : patched_fw/proc_jammer.cpp.i
+
+patched_fw/proc_jammer.s: patched_fw/proc_jammer.cpp.s
+.PHONY : patched_fw/proc_jammer.s
+
+# target to generate assembly for a file
+patched_fw/proc_jammer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_jammer.cpp.s
+.PHONY : patched_fw/proc_jammer.cpp.s
+
+patched_fw/proc_morse.o: patched_fw/proc_morse.cpp.o
+.PHONY : patched_fw/proc_morse.o
+
+# target to build an object file
+patched_fw/proc_morse.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_morse.cpp.o
+.PHONY : patched_fw/proc_morse.cpp.o
+
+patched_fw/proc_morse.i: patched_fw/proc_morse.cpp.i
+.PHONY : patched_fw/proc_morse.i
+
+# target to preprocess a source file
+patched_fw/proc_morse.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_morse.cpp.i
+.PHONY : patched_fw/proc_morse.cpp.i
+
+patched_fw/proc_morse.s: patched_fw/proc_morse.cpp.s
+.PHONY : patched_fw/proc_morse.s
+
+# target to generate assembly for a file
+patched_fw/proc_morse.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_morse.cpp.s
+.PHONY : patched_fw/proc_morse.cpp.s
+
+patched_fw/proc_morsetx.o: patched_fw/proc_morsetx.cpp.o
+.PHONY : patched_fw/proc_morsetx.o
+
+# target to build an object file
+patched_fw/proc_morsetx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_morsetx.cpp.o
+.PHONY : patched_fw/proc_morsetx.cpp.o
+
+patched_fw/proc_morsetx.i: patched_fw/proc_morsetx.cpp.i
+.PHONY : patched_fw/proc_morsetx.i
+
+# target to preprocess a source file
+patched_fw/proc_morsetx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_morsetx.cpp.i
+.PHONY : patched_fw/proc_morsetx.cpp.i
+
+patched_fw/proc_morsetx.s: patched_fw/proc_morsetx.cpp.s
+.PHONY : patched_fw/proc_morsetx.s
+
+# target to generate assembly for a file
+patched_fw/proc_morsetx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_morsetx.cpp.s
+.PHONY : patched_fw/proc_morsetx.cpp.s
+
 patched_fw/proc_nfm_audio.o: patched_fw/proc_nfm_audio.cpp.o
 .PHONY : patched_fw/proc_nfm_audio.o
 
@@ -6080,6 +6680,438 @@ patched_fw/proc_nfm_audio.s: patched_fw/proc_nfm_audio.cpp.s
 patched_fw/proc_nfm_audio.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_nfm_audio.cpp.s
 .PHONY : patched_fw/proc_nfm_audio.cpp.s
+
+patched_fw/proc_nrfrx.o: patched_fw/proc_nrfrx.cpp.o
+.PHONY : patched_fw/proc_nrfrx.o
+
+# target to build an object file
+patched_fw/proc_nrfrx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_nrfrx.cpp.o
+.PHONY : patched_fw/proc_nrfrx.cpp.o
+
+patched_fw/proc_nrfrx.i: patched_fw/proc_nrfrx.cpp.i
+.PHONY : patched_fw/proc_nrfrx.i
+
+# target to preprocess a source file
+patched_fw/proc_nrfrx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_nrfrx.cpp.i
+.PHONY : patched_fw/proc_nrfrx.cpp.i
+
+patched_fw/proc_nrfrx.s: patched_fw/proc_nrfrx.cpp.s
+.PHONY : patched_fw/proc_nrfrx.s
+
+# target to generate assembly for a file
+patched_fw/proc_nrfrx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_nrfrx.cpp.s
+.PHONY : patched_fw/proc_nrfrx.cpp.s
+
+patched_fw/proc_ook.o: patched_fw/proc_ook.cpp.o
+.PHONY : patched_fw/proc_ook.o
+
+# target to build an object file
+patched_fw/proc_ook.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ook.cpp.o
+.PHONY : patched_fw/proc_ook.cpp.o
+
+patched_fw/proc_ook.i: patched_fw/proc_ook.cpp.i
+.PHONY : patched_fw/proc_ook.i
+
+# target to preprocess a source file
+patched_fw/proc_ook.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ook.cpp.i
+.PHONY : patched_fw/proc_ook.cpp.i
+
+patched_fw/proc_ook.s: patched_fw/proc_ook.cpp.s
+.PHONY : patched_fw/proc_ook.s
+
+# target to generate assembly for a file
+patched_fw/proc_ook.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_ook.cpp.s
+.PHONY : patched_fw/proc_ook.cpp.s
+
+patched_fw/proc_p25_tx.o: patched_fw/proc_p25_tx.cpp.o
+.PHONY : patched_fw/proc_p25_tx.o
+
+# target to build an object file
+patched_fw/proc_p25_tx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_p25_tx.cpp.o
+.PHONY : patched_fw/proc_p25_tx.cpp.o
+
+patched_fw/proc_p25_tx.i: patched_fw/proc_p25_tx.cpp.i
+.PHONY : patched_fw/proc_p25_tx.i
+
+# target to preprocess a source file
+patched_fw/proc_p25_tx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_p25_tx.cpp.i
+.PHONY : patched_fw/proc_p25_tx.cpp.i
+
+patched_fw/proc_p25_tx.s: patched_fw/proc_p25_tx.cpp.s
+.PHONY : patched_fw/proc_p25_tx.s
+
+# target to generate assembly for a file
+patched_fw/proc_p25_tx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_p25_tx.cpp.s
+.PHONY : patched_fw/proc_p25_tx.cpp.s
+
+patched_fw/proc_pocsag2.o: patched_fw/proc_pocsag2.cpp.o
+.PHONY : patched_fw/proc_pocsag2.o
+
+# target to build an object file
+patched_fw/proc_pocsag2.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_pocsag2.cpp.o
+.PHONY : patched_fw/proc_pocsag2.cpp.o
+
+patched_fw/proc_pocsag2.i: patched_fw/proc_pocsag2.cpp.i
+.PHONY : patched_fw/proc_pocsag2.i
+
+# target to preprocess a source file
+patched_fw/proc_pocsag2.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_pocsag2.cpp.i
+.PHONY : patched_fw/proc_pocsag2.cpp.i
+
+patched_fw/proc_pocsag2.s: patched_fw/proc_pocsag2.cpp.s
+.PHONY : patched_fw/proc_pocsag2.s
+
+# target to generate assembly for a file
+patched_fw/proc_pocsag2.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_pocsag2.cpp.s
+.PHONY : patched_fw/proc_pocsag2.cpp.s
+
+patched_fw/proc_protoview.o: patched_fw/proc_protoview.cpp.o
+.PHONY : patched_fw/proc_protoview.o
+
+# target to build an object file
+patched_fw/proc_protoview.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_protoview.cpp.o
+.PHONY : patched_fw/proc_protoview.cpp.o
+
+patched_fw/proc_protoview.i: patched_fw/proc_protoview.cpp.i
+.PHONY : patched_fw/proc_protoview.i
+
+# target to preprocess a source file
+patched_fw/proc_protoview.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_protoview.cpp.i
+.PHONY : patched_fw/proc_protoview.cpp.i
+
+patched_fw/proc_protoview.s: patched_fw/proc_protoview.cpp.s
+.PHONY : patched_fw/proc_protoview.s
+
+# target to generate assembly for a file
+patched_fw/proc_protoview.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_protoview.cpp.s
+.PHONY : patched_fw/proc_protoview.cpp.s
+
+patched_fw/proc_rds.o: patched_fw/proc_rds.cpp.o
+.PHONY : patched_fw/proc_rds.o
+
+# target to build an object file
+patched_fw/proc_rds.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rds.cpp.o
+.PHONY : patched_fw/proc_rds.cpp.o
+
+patched_fw/proc_rds.i: patched_fw/proc_rds.cpp.i
+.PHONY : patched_fw/proc_rds.i
+
+# target to preprocess a source file
+patched_fw/proc_rds.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rds.cpp.i
+.PHONY : patched_fw/proc_rds.cpp.i
+
+patched_fw/proc_rds.s: patched_fw/proc_rds.cpp.s
+.PHONY : patched_fw/proc_rds.s
+
+# target to generate assembly for a file
+patched_fw/proc_rds.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rds.cpp.s
+.PHONY : patched_fw/proc_rds.cpp.s
+
+patched_fw/proc_rtty_rx.o: patched_fw/proc_rtty_rx.cpp.o
+.PHONY : patched_fw/proc_rtty_rx.o
+
+# target to build an object file
+patched_fw/proc_rtty_rx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rtty_rx.cpp.o
+.PHONY : patched_fw/proc_rtty_rx.cpp.o
+
+patched_fw/proc_rtty_rx.i: patched_fw/proc_rtty_rx.cpp.i
+.PHONY : patched_fw/proc_rtty_rx.i
+
+# target to preprocess a source file
+patched_fw/proc_rtty_rx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rtty_rx.cpp.i
+.PHONY : patched_fw/proc_rtty_rx.cpp.i
+
+patched_fw/proc_rtty_rx.s: patched_fw/proc_rtty_rx.cpp.s
+.PHONY : patched_fw/proc_rtty_rx.s
+
+# target to generate assembly for a file
+patched_fw/proc_rtty_rx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rtty_rx.cpp.s
+.PHONY : patched_fw/proc_rtty_rx.cpp.s
+
+patched_fw/proc_rtty_tx.o: patched_fw/proc_rtty_tx.cpp.o
+.PHONY : patched_fw/proc_rtty_tx.o
+
+# target to build an object file
+patched_fw/proc_rtty_tx.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rtty_tx.cpp.o
+.PHONY : patched_fw/proc_rtty_tx.cpp.o
+
+patched_fw/proc_rtty_tx.i: patched_fw/proc_rtty_tx.cpp.i
+.PHONY : patched_fw/proc_rtty_tx.i
+
+# target to preprocess a source file
+patched_fw/proc_rtty_tx.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rtty_tx.cpp.i
+.PHONY : patched_fw/proc_rtty_tx.cpp.i
+
+patched_fw/proc_rtty_tx.s: patched_fw/proc_rtty_tx.cpp.s
+.PHONY : patched_fw/proc_rtty_tx.s
+
+# target to generate assembly for a file
+patched_fw/proc_rtty_tx.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_rtty_tx.cpp.s
+.PHONY : patched_fw/proc_rtty_tx.cpp.s
+
+patched_fw/proc_siggen.o: patched_fw/proc_siggen.cpp.o
+.PHONY : patched_fw/proc_siggen.o
+
+# target to build an object file
+patched_fw/proc_siggen.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_siggen.cpp.o
+.PHONY : patched_fw/proc_siggen.cpp.o
+
+patched_fw/proc_siggen.i: patched_fw/proc_siggen.cpp.i
+.PHONY : patched_fw/proc_siggen.i
+
+# target to preprocess a source file
+patched_fw/proc_siggen.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_siggen.cpp.i
+.PHONY : patched_fw/proc_siggen.cpp.i
+
+patched_fw/proc_siggen.s: patched_fw/proc_siggen.cpp.s
+.PHONY : patched_fw/proc_siggen.s
+
+# target to generate assembly for a file
+patched_fw/proc_siggen.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_siggen.cpp.s
+.PHONY : patched_fw/proc_siggen.cpp.s
+
+patched_fw/proc_sonde.o: patched_fw/proc_sonde.cpp.o
+.PHONY : patched_fw/proc_sonde.o
+
+# target to build an object file
+patched_fw/proc_sonde.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_sonde.cpp.o
+.PHONY : patched_fw/proc_sonde.cpp.o
+
+patched_fw/proc_sonde.i: patched_fw/proc_sonde.cpp.i
+.PHONY : patched_fw/proc_sonde.i
+
+# target to preprocess a source file
+patched_fw/proc_sonde.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_sonde.cpp.i
+.PHONY : patched_fw/proc_sonde.cpp.i
+
+patched_fw/proc_sonde.s: patched_fw/proc_sonde.cpp.s
+.PHONY : patched_fw/proc_sonde.s
+
+# target to generate assembly for a file
+patched_fw/proc_sonde.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_sonde.cpp.s
+.PHONY : patched_fw/proc_sonde.cpp.s
+
+patched_fw/proc_spectrum_painter.o: patched_fw/proc_spectrum_painter.cpp.o
+.PHONY : patched_fw/proc_spectrum_painter.o
+
+# target to build an object file
+patched_fw/proc_spectrum_painter.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_spectrum_painter.cpp.o
+.PHONY : patched_fw/proc_spectrum_painter.cpp.o
+
+patched_fw/proc_spectrum_painter.i: patched_fw/proc_spectrum_painter.cpp.i
+.PHONY : patched_fw/proc_spectrum_painter.i
+
+# target to preprocess a source file
+patched_fw/proc_spectrum_painter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_spectrum_painter.cpp.i
+.PHONY : patched_fw/proc_spectrum_painter.cpp.i
+
+patched_fw/proc_spectrum_painter.s: patched_fw/proc_spectrum_painter.cpp.s
+.PHONY : patched_fw/proc_spectrum_painter.s
+
+# target to generate assembly for a file
+patched_fw/proc_spectrum_painter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_spectrum_painter.cpp.s
+.PHONY : patched_fw/proc_spectrum_painter.cpp.s
+
+patched_fw/proc_subcar.o: patched_fw/proc_subcar.cpp.o
+.PHONY : patched_fw/proc_subcar.o
+
+# target to build an object file
+patched_fw/proc_subcar.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_subcar.cpp.o
+.PHONY : patched_fw/proc_subcar.cpp.o
+
+patched_fw/proc_subcar.i: patched_fw/proc_subcar.cpp.i
+.PHONY : patched_fw/proc_subcar.i
+
+# target to preprocess a source file
+patched_fw/proc_subcar.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_subcar.cpp.i
+.PHONY : patched_fw/proc_subcar.cpp.i
+
+patched_fw/proc_subcar.s: patched_fw/proc_subcar.cpp.s
+.PHONY : patched_fw/proc_subcar.s
+
+# target to generate assembly for a file
+patched_fw/proc_subcar.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_subcar.cpp.s
+.PHONY : patched_fw/proc_subcar.cpp.s
+
+patched_fw/proc_subghzd.o: patched_fw/proc_subghzd.cpp.o
+.PHONY : patched_fw/proc_subghzd.o
+
+# target to build an object file
+patched_fw/proc_subghzd.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_subghzd.cpp.o
+.PHONY : patched_fw/proc_subghzd.cpp.o
+
+patched_fw/proc_subghzd.i: patched_fw/proc_subghzd.cpp.i
+.PHONY : patched_fw/proc_subghzd.i
+
+# target to preprocess a source file
+patched_fw/proc_subghzd.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_subghzd.cpp.i
+.PHONY : patched_fw/proc_subghzd.cpp.i
+
+patched_fw/proc_subghzd.s: patched_fw/proc_subghzd.cpp.s
+.PHONY : patched_fw/proc_subghzd.s
+
+# target to generate assembly for a file
+patched_fw/proc_subghzd.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_subghzd.cpp.s
+.PHONY : patched_fw/proc_subghzd.cpp.s
+
+patched_fw/proc_time_sink.o: patched_fw/proc_time_sink.cpp.o
+.PHONY : patched_fw/proc_time_sink.o
+
+# target to build an object file
+patched_fw/proc_time_sink.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_time_sink.cpp.o
+.PHONY : patched_fw/proc_time_sink.cpp.o
+
+patched_fw/proc_time_sink.i: patched_fw/proc_time_sink.cpp.i
+.PHONY : patched_fw/proc_time_sink.i
+
+# target to preprocess a source file
+patched_fw/proc_time_sink.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_time_sink.cpp.i
+.PHONY : patched_fw/proc_time_sink.cpp.i
+
+patched_fw/proc_time_sink.s: patched_fw/proc_time_sink.cpp.s
+.PHONY : patched_fw/proc_time_sink.s
+
+# target to generate assembly for a file
+patched_fw/proc_time_sink.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_time_sink.cpp.s
+.PHONY : patched_fw/proc_time_sink.cpp.s
+
+patched_fw/proc_tonedetect.o: patched_fw/proc_tonedetect.cpp.o
+.PHONY : patched_fw/proc_tonedetect.o
+
+# target to build an object file
+patched_fw/proc_tonedetect.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tonedetect.cpp.o
+.PHONY : patched_fw/proc_tonedetect.cpp.o
+
+patched_fw/proc_tonedetect.i: patched_fw/proc_tonedetect.cpp.i
+.PHONY : patched_fw/proc_tonedetect.i
+
+# target to preprocess a source file
+patched_fw/proc_tonedetect.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tonedetect.cpp.i
+.PHONY : patched_fw/proc_tonedetect.cpp.i
+
+patched_fw/proc_tonedetect.s: patched_fw/proc_tonedetect.cpp.s
+.PHONY : patched_fw/proc_tonedetect.s
+
+# target to generate assembly for a file
+patched_fw/proc_tonedetect.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tonedetect.cpp.s
+.PHONY : patched_fw/proc_tonedetect.cpp.s
+
+patched_fw/proc_tones.o: patched_fw/proc_tones.cpp.o
+.PHONY : patched_fw/proc_tones.o
+
+# target to build an object file
+patched_fw/proc_tones.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tones.cpp.o
+.PHONY : patched_fw/proc_tones.cpp.o
+
+patched_fw/proc_tones.i: patched_fw/proc_tones.cpp.i
+.PHONY : patched_fw/proc_tones.i
+
+# target to preprocess a source file
+patched_fw/proc_tones.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tones.cpp.i
+.PHONY : patched_fw/proc_tones.cpp.i
+
+patched_fw/proc_tones.s: patched_fw/proc_tones.cpp.s
+.PHONY : patched_fw/proc_tones.s
+
+# target to generate assembly for a file
+patched_fw/proc_tones.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tones.cpp.s
+.PHONY : patched_fw/proc_tones.cpp.s
+
+patched_fw/proc_tpms.o: patched_fw/proc_tpms.cpp.o
+.PHONY : patched_fw/proc_tpms.o
+
+# target to build an object file
+patched_fw/proc_tpms.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tpms.cpp.o
+.PHONY : patched_fw/proc_tpms.cpp.o
+
+patched_fw/proc_tpms.i: patched_fw/proc_tpms.cpp.i
+.PHONY : patched_fw/proc_tpms.i
+
+# target to preprocess a source file
+patched_fw/proc_tpms.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tpms.cpp.i
+.PHONY : patched_fw/proc_tpms.cpp.i
+
+patched_fw/proc_tpms.s: patched_fw/proc_tpms.cpp.s
+.PHONY : patched_fw/proc_tpms.s
+
+# target to generate assembly for a file
+patched_fw/proc_tpms.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_tpms.cpp.s
+.PHONY : patched_fw/proc_tpms.cpp.s
+
+patched_fw/proc_weather.o: patched_fw/proc_weather.cpp.o
+.PHONY : patched_fw/proc_weather.o
+
+# target to build an object file
+patched_fw/proc_weather.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_weather.cpp.o
+.PHONY : patched_fw/proc_weather.cpp.o
+
+patched_fw/proc_weather.i: patched_fw/proc_weather.cpp.i
+.PHONY : patched_fw/proc_weather.i
+
+# target to preprocess a source file
+patched_fw/proc_weather.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_weather.cpp.i
+.PHONY : patched_fw/proc_weather.cpp.i
+
+patched_fw/proc_weather.s: patched_fw/proc_weather.cpp.s
+.PHONY : patched_fw/proc_weather.s
+
+# target to generate assembly for a file
+patched_fw/proc_weather.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/emuhem.dir/build.make CMakeFiles/emuhem.dir/patched_fw/proc_weather.cpp.s
+.PHONY : patched_fw/proc_weather.cpp.s
 
 patched_fw/proc_wfm_audio.o: patched_fw/proc_wfm_audio.cpp.o
 .PHONY : patched_fw/proc_wfm_audio.o
@@ -7152,6 +8184,12 @@ help:
 	@echo "... mayhem-firmware/firmware/baseband/baseband_thread.o"
 	@echo "... mayhem-firmware/firmware/baseband/baseband_thread.i"
 	@echo "... mayhem-firmware/firmware/baseband/baseband_thread.s"
+	@echo "... mayhem-firmware/firmware/baseband/channel_decimator.o"
+	@echo "... mayhem-firmware/firmware/baseband/channel_decimator.i"
+	@echo "... mayhem-firmware/firmware/baseband/channel_decimator.s"
+	@echo "... mayhem-firmware/firmware/baseband/clock_recovery.o"
+	@echo "... mayhem-firmware/firmware/baseband/clock_recovery.i"
+	@echo "... mayhem-firmware/firmware/baseband/clock_recovery.s"
 	@echo "... mayhem-firmware/firmware/baseband/dsp_decimate.o"
 	@echo "... mayhem-firmware/firmware/baseband/dsp_decimate.i"
 	@echo "... mayhem-firmware/firmware/baseband/dsp_decimate.s"
@@ -7164,9 +8202,18 @@ help:
 	@echo "... mayhem-firmware/firmware/baseband/dsp_modulate.o"
 	@echo "... mayhem-firmware/firmware/baseband/dsp_modulate.i"
 	@echo "... mayhem-firmware/firmware/baseband/dsp_modulate.s"
+	@echo "... mayhem-firmware/firmware/baseband/matched_filter.o"
+	@echo "... mayhem-firmware/firmware/baseband/matched_filter.i"
+	@echo "... mayhem-firmware/firmware/baseband/matched_filter.s"
+	@echo "... mayhem-firmware/firmware/baseband/packet_builder.o"
+	@echo "... mayhem-firmware/firmware/baseband/packet_builder.i"
+	@echo "... mayhem-firmware/firmware/baseband/packet_builder.s"
 	@echo "... mayhem-firmware/firmware/baseband/rssi_thread.o"
 	@echo "... mayhem-firmware/firmware/baseband/rssi_thread.i"
 	@echo "... mayhem-firmware/firmware/baseband/rssi_thread.s"
+	@echo "... mayhem-firmware/firmware/baseband/stream_input.o"
+	@echo "... mayhem-firmware/firmware/baseband/stream_input.i"
+	@echo "... mayhem-firmware/firmware/baseband/stream_input.s"
 	@echo "... mayhem-firmware/firmware/common/adsb.o"
 	@echo "... mayhem-firmware/firmware/common/adsb.i"
 	@echo "... mayhem-firmware/firmware/common/adsb.s"
@@ -7215,9 +8262,6 @@ help:
 	@echo "... mayhem-firmware/firmware/common/event.o"
 	@echo "... mayhem-firmware/firmware/common/event.i"
 	@echo "... mayhem-firmware/firmware/common/event.s"
-	@echo "... mayhem-firmware/firmware/common/gcc.o"
-	@echo "... mayhem-firmware/firmware/common/gcc.i"
-	@echo "... mayhem-firmware/firmware/common/gcc.s"
 	@echo "... mayhem-firmware/firmware/common/i2cdev_ads1110.o"
 	@echo "... mayhem-firmware/firmware/common/i2cdev_ads1110.i"
 	@echo "... mayhem-firmware/firmware/common/i2cdev_ads1110.s"
@@ -7308,12 +8352,129 @@ help:
 	@echo "... patched_fw/event_m4.o"
 	@echo "... patched_fw/event_m4.i"
 	@echo "... patched_fw/event_m4.s"
+	@echo "... patched_fw/proc_acars.o"
+	@echo "... patched_fw/proc_acars.i"
+	@echo "... patched_fw/proc_acars.s"
+	@echo "... patched_fw/proc_adsbrx.o"
+	@echo "... patched_fw/proc_adsbrx.i"
+	@echo "... patched_fw/proc_adsbrx.s"
+	@echo "... patched_fw/proc_adsbtx.o"
+	@echo "... patched_fw/proc_adsbtx.i"
+	@echo "... patched_fw/proc_adsbtx.s"
+	@echo "... patched_fw/proc_afsk.o"
+	@echo "... patched_fw/proc_afsk.i"
+	@echo "... patched_fw/proc_afsk.s"
+	@echo "... patched_fw/proc_afskrx.o"
+	@echo "... patched_fw/proc_afskrx.i"
+	@echo "... patched_fw/proc_afskrx.s"
+	@echo "... patched_fw/proc_ais.o"
+	@echo "... patched_fw/proc_ais.i"
+	@echo "... patched_fw/proc_ais.s"
 	@echo "... patched_fw/proc_am_audio.o"
 	@echo "... patched_fw/proc_am_audio.i"
 	@echo "... patched_fw/proc_am_audio.s"
+	@echo "... patched_fw/proc_aprsrx.o"
+	@echo "... patched_fw/proc_aprsrx.i"
+	@echo "... patched_fw/proc_aprsrx.s"
+	@echo "... patched_fw/proc_audio_beep.o"
+	@echo "... patched_fw/proc_audio_beep.i"
+	@echo "... patched_fw/proc_audio_beep.s"
+	@echo "... patched_fw/proc_audiotx.o"
+	@echo "... patched_fw/proc_audiotx.i"
+	@echo "... patched_fw/proc_audiotx.s"
+	@echo "... patched_fw/proc_ble_tx.o"
+	@echo "... patched_fw/proc_ble_tx.i"
+	@echo "... patched_fw/proc_ble_tx.s"
+	@echo "... patched_fw/proc_btlerx.o"
+	@echo "... patched_fw/proc_btlerx.i"
+	@echo "... patched_fw/proc_btlerx.s"
+	@echo "... patched_fw/proc_epirb.o"
+	@echo "... patched_fw/proc_epirb.i"
+	@echo "... patched_fw/proc_epirb.s"
+	@echo "... patched_fw/proc_epirb_tx.o"
+	@echo "... patched_fw/proc_epirb_tx.i"
+	@echo "... patched_fw/proc_epirb_tx.s"
+	@echo "... patched_fw/proc_ert.o"
+	@echo "... patched_fw/proc_ert.i"
+	@echo "... patched_fw/proc_ert.s"
+	@echo "... patched_fw/proc_flex.o"
+	@echo "... patched_fw/proc_flex.i"
+	@echo "... patched_fw/proc_flex.s"
+	@echo "... patched_fw/proc_fsk.o"
+	@echo "... patched_fw/proc_fsk.i"
+	@echo "... patched_fw/proc_fsk.s"
+	@echo "... patched_fw/proc_fsk_rx.o"
+	@echo "... patched_fw/proc_fsk_rx.i"
+	@echo "... patched_fw/proc_fsk_rx.s"
+	@echo "... patched_fw/proc_gps_sim.o"
+	@echo "... patched_fw/proc_gps_sim.i"
+	@echo "... patched_fw/proc_gps_sim.s"
+	@echo "... patched_fw/proc_jammer.o"
+	@echo "... patched_fw/proc_jammer.i"
+	@echo "... patched_fw/proc_jammer.s"
+	@echo "... patched_fw/proc_morse.o"
+	@echo "... patched_fw/proc_morse.i"
+	@echo "... patched_fw/proc_morse.s"
+	@echo "... patched_fw/proc_morsetx.o"
+	@echo "... patched_fw/proc_morsetx.i"
+	@echo "... patched_fw/proc_morsetx.s"
 	@echo "... patched_fw/proc_nfm_audio.o"
 	@echo "... patched_fw/proc_nfm_audio.i"
 	@echo "... patched_fw/proc_nfm_audio.s"
+	@echo "... patched_fw/proc_nrfrx.o"
+	@echo "... patched_fw/proc_nrfrx.i"
+	@echo "... patched_fw/proc_nrfrx.s"
+	@echo "... patched_fw/proc_ook.o"
+	@echo "... patched_fw/proc_ook.i"
+	@echo "... patched_fw/proc_ook.s"
+	@echo "... patched_fw/proc_p25_tx.o"
+	@echo "... patched_fw/proc_p25_tx.i"
+	@echo "... patched_fw/proc_p25_tx.s"
+	@echo "... patched_fw/proc_pocsag2.o"
+	@echo "... patched_fw/proc_pocsag2.i"
+	@echo "... patched_fw/proc_pocsag2.s"
+	@echo "... patched_fw/proc_protoview.o"
+	@echo "... patched_fw/proc_protoview.i"
+	@echo "... patched_fw/proc_protoview.s"
+	@echo "... patched_fw/proc_rds.o"
+	@echo "... patched_fw/proc_rds.i"
+	@echo "... patched_fw/proc_rds.s"
+	@echo "... patched_fw/proc_rtty_rx.o"
+	@echo "... patched_fw/proc_rtty_rx.i"
+	@echo "... patched_fw/proc_rtty_rx.s"
+	@echo "... patched_fw/proc_rtty_tx.o"
+	@echo "... patched_fw/proc_rtty_tx.i"
+	@echo "... patched_fw/proc_rtty_tx.s"
+	@echo "... patched_fw/proc_siggen.o"
+	@echo "... patched_fw/proc_siggen.i"
+	@echo "... patched_fw/proc_siggen.s"
+	@echo "... patched_fw/proc_sonde.o"
+	@echo "... patched_fw/proc_sonde.i"
+	@echo "... patched_fw/proc_sonde.s"
+	@echo "... patched_fw/proc_spectrum_painter.o"
+	@echo "... patched_fw/proc_spectrum_painter.i"
+	@echo "... patched_fw/proc_spectrum_painter.s"
+	@echo "... patched_fw/proc_subcar.o"
+	@echo "... patched_fw/proc_subcar.i"
+	@echo "... patched_fw/proc_subcar.s"
+	@echo "... patched_fw/proc_subghzd.o"
+	@echo "... patched_fw/proc_subghzd.i"
+	@echo "... patched_fw/proc_subghzd.s"
+	@echo "... patched_fw/proc_time_sink.o"
+	@echo "... patched_fw/proc_time_sink.i"
+	@echo "... patched_fw/proc_time_sink.s"
+	@echo "... patched_fw/proc_tonedetect.o"
+	@echo "... patched_fw/proc_tonedetect.i"
+	@echo "... patched_fw/proc_tonedetect.s"
+	@echo "... patched_fw/proc_tones.o"
+	@echo "... patched_fw/proc_tones.i"
+	@echo "... patched_fw/proc_tones.s"
+	@echo "... patched_fw/proc_tpms.o"
+	@echo "... patched_fw/proc_tpms.i"
+	@echo "... patched_fw/proc_tpms.s"
+	@echo "... patched_fw/proc_weather.o"
+	@echo "... patched_fw/proc_weather.i"
+	@echo "... patched_fw/proc_weather.s"
 	@echo "... patched_fw/proc_wfm_audio.o"
 	@echo "... patched_fw/proc_wfm_audio.i"
 	@echo "... patched_fw/proc_wfm_audio.s"

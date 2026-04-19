@@ -28,6 +28,19 @@ add_definitions(-include errno.h)
 find_package(SDL3 REQUIRED)
 
 # ---------------------------------------------------------------------------
+# SoapySDR (optional): enables live USB SDR dongles as an I/Q source.
+# ---------------------------------------------------------------------------
+find_package(SoapySDR CONFIG QUIET
+    PATHS /opt/homebrew/Cellar/soapysdr/0.8.1_1/share/cmake/SoapySDR
+          /opt/homebrew/share/cmake/SoapySDR
+          /usr/local/share/cmake/SoapySDR)
+if(SoapySDR_FOUND)
+    message(STATUS "SoapySDR found: USB SDR sources enabled")
+else()
+    message(STATUS "SoapySDR not found: USB SDR sources disabled (brew install soapysdr)")
+endif()
+
+# ---------------------------------------------------------------------------
 # Source paths
 # ---------------------------------------------------------------------------
 set(EMU_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -230,6 +243,199 @@ string(REPLACE
 file(WRITE ${PATCHED_FW_DIR}/audio_compressor.cpp "${_ACMPC}")
 file(COPY_FILE ${PATCHED_FW_DIR}/audio_compressor.cpp ${FW_DIR}/baseband/audio_compressor.cpp ONLY_IF_DIFFERENT)
 
+# ---------------------------------------------------------------------------
+# Phase 9: Additional baseband processors
+# Strip trailing int main() (conflicts with main_emu.cpp) and, where Clang
+# rejects function-scope constexpr on static-member reads, demote to const.
+# ---------------------------------------------------------------------------
+
+# proc_pocsag2.cpp: POCSAGProcessor; has 4 constexpr size_t locals.
+file(READ ${FW_DIR}/baseband/proc_pocsag2.cpp _PPOC2)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<POCSAGProcessor>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PPOC2 "${_PPOC2}")
+string(REPLACE "constexpr size_t " "const size_t " _PPOC2 "${_PPOC2}")
+file(WRITE ${PATCHED_FW_DIR}/proc_pocsag2.cpp "${_PPOC2}")
+
+# proc_tpms.cpp: TPMSProcessor
+file(READ ${FW_DIR}/baseband/proc_tpms.cpp _PTPM)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n    EventDispatcher event_dispatcher{std::make_unique<TPMSProcessor>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PTPM "${_PTPM}")
+file(WRITE ${PATCHED_FW_DIR}/proc_tpms.cpp "${_PTPM}")
+
+# proc_ert.cpp: ERTProcessor
+file(READ ${FW_DIR}/baseband/proc_ert.cpp _PERT)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n    EventDispatcher event_dispatcher{std::make_unique<ERTProcessor>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PERT "${_PERT}")
+file(WRITE ${PATCHED_FW_DIR}/proc_ert.cpp "${_PERT}")
+
+# proc_ais.cpp: AISProcessor
+file(READ ${FW_DIR}/baseband/proc_ais.cpp _PAIS)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n    EventDispatcher event_dispatcher{std::make_unique<AISProcessor>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PAIS "${_PAIS}")
+file(WRITE ${PATCHED_FW_DIR}/proc_ais.cpp "${_PAIS}")
+
+# proc_tones.cpp: TonesProcessor
+file(READ ${FW_DIR}/baseband/proc_tones.cpp _PTON)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<TonesProcessor>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PTON "${_PTON}")
+file(WRITE ${PATCHED_FW_DIR}/proc_tones.cpp "${_PTON}")
+
+# proc_audio_beep.cpp: AudioBeepProcessor
+file(READ ${FW_DIR}/baseband/proc_audio_beep.cpp _PABP)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n    EventDispatcher event_dispatcher{std::make_unique<AudioBeepProcessor>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PABP "${_PABP}")
+file(WRITE ${PATCHED_FW_DIR}/proc_audio_beep.cpp "${_PABP}")
+
+# phase_detector.hpp: history_t is uint32_t, but `unsigned long` is 64-bit on
+# macOS/Linux. Use __builtin_popcount (int) instead of popcountl (long).
+file(READ ${FW_DIR}/baseband/phase_detector.hpp _PHDET)
+string(REPLACE
+    "sizeof(history_t) == sizeof(unsigned long)"
+    "sizeof(history_t) == sizeof(unsigned int)"
+    _PHDET "${_PHDET}")
+string(REPLACE "__builtin_popcountl" "__builtin_popcount" _PHDET "${_PHDET}")
+string(REPLACE "popcountl size mismatch" "popcount size mismatch" _PHDET "${_PHDET}")
+file(WRITE ${PATCHED_FW_DIR}/phase_detector.hpp "${_PHDET}")
+file(COPY_FILE ${PATCHED_FW_DIR}/phase_detector.hpp ${FW_DIR}/baseband/phase_detector.hpp ONLY_IF_DIFFERENT)
+
+# proc_siggen.cpp: SigGenProcessor (no init_audio_out in main)
+file(READ ${FW_DIR}/baseband/proc_siggen.cpp _PSIG)
+string(REPLACE
+    "int main() {\n    EventDispatcher event_dispatcher{std::make_unique<SigGenProcessor>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PSIG "${_PSIG}")
+file(WRITE ${PATCHED_FW_DIR}/proc_siggen.cpp "${_PSIG}")
+
+# ---------------------------------------------------------------------------
+# Phase 10: More baseband processors (8 RX + 6 TX)
+# Same pattern: strip int main() via exact REPLACE; demote constexpr size_t
+# locals in files that have them (Clang strictness).
+# ---------------------------------------------------------------------------
+
+macro(emuhem_strip_proc_main proc_basename class_name has_audio_init has_blank_line)
+    file(READ ${FW_DIR}/baseband/${proc_basename}.cpp _PATCH_TMP)
+    if(${has_audio_init})
+        if(${has_blank_line})
+            string(REPLACE
+                "int main() {\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<${class_name}>()};\n    event_dispatcher.run();\n    return 0;\n}"
+                "// main() removed for EmuHem -- processor is instantiated via registry"
+                _PATCH_TMP "${_PATCH_TMP}")
+        else()
+            string(REPLACE
+                "int main() {\n    audio::dma::init_audio_out();\n    EventDispatcher event_dispatcher{std::make_unique<${class_name}>()};\n    event_dispatcher.run();\n    return 0;\n}"
+                "// main() removed for EmuHem -- processor is instantiated via registry"
+                _PATCH_TMP "${_PATCH_TMP}")
+        endif()
+    else()
+        string(REPLACE
+            "int main() {\n    EventDispatcher event_dispatcher{std::make_unique<${class_name}>()};\n    event_dispatcher.run();\n    return 0;\n}"
+            "// main() removed for EmuHem -- processor is instantiated via registry"
+            _PATCH_TMP "${_PATCH_TMP}")
+    endif()
+    # Clang is stricter than GCC-ARM about function-scope constexpr reads of
+    # static class members -- demote to const.
+    string(REPLACE "constexpr size_t " "const size_t " _PATCH_TMP "${_PATCH_TMP}")
+    file(WRITE ${PATCHED_FW_DIR}/${proc_basename}.cpp "${_PATCH_TMP}")
+endmacro()
+
+# proc_fsk_rx.hpp: rename MultiDecimator → FskMultiDecimator. Firmware gives
+# each processor its own binary so global-scope MultiDecimator classes in
+# proc_wfm_audio.hpp and proc_fsk_rx.hpp don't collide there; in EmuHem both
+# headers end up in the same TU (core_control_emu.cpp registers both) and the
+# two definitions conflict. Rename the FSK_RX variant in PATCHED_FW_DIR only;
+# proc_fsk_rx.cpp is compiled from PATCHED_FW_DIR so same-dir include resolves
+# to the patched header.
+#
+# Idempotency: use a sentinel first so the rename survives re-configure.
+# Reads from FW_DIR (pristine) each time -- we never copy back in-place.
+file(READ ${FW_DIR}/baseband/proc_fsk_rx.hpp _PFSKRXH)
+string(REPLACE "class MultiDecimator {" "class __SENTINEL_MD__ {" _PFSKRXH "${_PFSKRXH}")
+string(REPLACE "MultiDecimator<" "__SENTINEL_MD__<" _PFSKRXH "${_PFSKRXH}")
+string(REPLACE "__SENTINEL_MD__" "FskMultiDecimator" _PFSKRXH "${_PFSKRXH}")
+file(WRITE ${PATCHED_FW_DIR}/proc_fsk_rx.hpp "${_PFSKRXH}")
+
+# RX digital decoders
+emuhem_strip_proc_main(proc_afskrx    AFSKRxProcessor   TRUE  TRUE)
+emuhem_strip_proc_main(proc_aprsrx    APRSRxProcessor   TRUE  TRUE)
+emuhem_strip_proc_main(proc_btlerx    BTLERxProcessor   FALSE FALSE)
+emuhem_strip_proc_main(proc_nrfrx     NRFRxProcessor    FALSE FALSE)
+emuhem_strip_proc_main(proc_fsk_rx    FSKRxProcessor    FALSE FALSE)
+emuhem_strip_proc_main(proc_weather   WeatherProcessor  TRUE  FALSE)
+emuhem_strip_proc_main(proc_subghzd   SubGhzDProcessor  FALSE FALSE)
+emuhem_strip_proc_main(proc_protoview ProtoViewProcessor TRUE FALSE)
+
+# TX modulators
+emuhem_strip_proc_main(proc_afsk      AFSKProcessor     FALSE FALSE)
+emuhem_strip_proc_main(proc_fsk       FSKProcessor      FALSE FALSE)
+emuhem_strip_proc_main(proc_ook       OOKProcessor      FALSE FALSE)
+emuhem_strip_proc_main(proc_ble_tx    BTLETxProcessor   FALSE FALSE)
+emuhem_strip_proc_main(proc_adsbtx    ADSBTXProcessor   FALSE FALSE)
+emuhem_strip_proc_main(proc_rds       RDSProcessor      FALSE FALSE)
+
+# ---------------------------------------------------------------------------
+# Phase 11: More baseband processors (9 RX + 9 TX)
+# ---------------------------------------------------------------------------
+
+# RX digital decoders
+emuhem_strip_proc_main(proc_acars     ACARSProcessor            FALSE FALSE)
+emuhem_strip_proc_main(proc_adsbrx    ADSBRXProcessor           TRUE  FALSE)
+emuhem_strip_proc_main(proc_flex      FlexProcessor             FALSE FALSE)
+# proc_flex.cpp duplicates EccContainer::{ctor,setup_ecc,error_correct} from
+# common/pocsag.cpp (the comment says "to avoid linking pocsag.cpp which pulls
+# in app headers" -- true on target, but we compile both in EmuHem). Strip the
+# duplicated block by surrounding it with #if 0 ... #endif.
+file(READ ${PATCHED_FW_DIR}/proc_flex.cpp _PFLX)
+string(REPLACE
+    "// Implement EccContainer here to avoid linking pocsag.cpp which pulls in app headers\nusing namespace pocsag;"
+    "// Implement EccContainer here to avoid linking pocsag.cpp which pulls in app headers\nusing namespace pocsag;\n#if 0  // EmuHem: pocsag.cpp is already linked, avoid duplicate symbols"
+    _PFLX "${_PFLX}")
+# Close the #if 0 right before the anonymous `namespace {` helper block.
+string(REPLACE
+    "    return errl;\n}\n\nnamespace {"
+    "    return errl;\n}\n#endif  // EmuHem\n\nnamespace {"
+    _PFLX "${_PFLX}")
+file(WRITE ${PATCHED_FW_DIR}/proc_flex.cpp "${_PFLX}")
+# proc_sonde has an extra blank line between run() and return 0 -- patch directly.
+file(READ ${FW_DIR}/baseband/proc_sonde.cpp _PSON)
+string(REPLACE
+    "int main() {\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<SondeProcessor>()};\n    event_dispatcher.run();\n\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PSON "${_PSON}")
+file(WRITE ${PATCHED_FW_DIR}/proc_sonde.cpp "${_PSON}")
+emuhem_strip_proc_main(proc_epirb     EPIRBProcessor            FALSE FALSE)
+emuhem_strip_proc_main(proc_tonedetect ToneDetectProcessor      TRUE  FALSE)
+emuhem_strip_proc_main(proc_subcar    SubCarProcessor           FALSE FALSE)
+emuhem_strip_proc_main(proc_rtty_rx   RTTYRxProcessor           TRUE  FALSE)
+emuhem_strip_proc_main(proc_morse     MorseProcessor            TRUE  FALSE)
+
+# TX modulators
+emuhem_strip_proc_main(proc_morsetx          MorseTXProcessor          TRUE  FALSE)
+emuhem_strip_proc_main(proc_rtty_tx          RTTYTXProcessor           FALSE FALSE)
+emuhem_strip_proc_main(proc_jammer           JammerProcessor           FALSE FALSE)
+emuhem_strip_proc_main(proc_p25_tx           P25TxProcessor            FALSE FALSE)
+emuhem_strip_proc_main(proc_gps_sim          GPSReplayProcessor        FALSE FALSE)
+emuhem_strip_proc_main(proc_spectrum_painter SpectrumPainterProcessor  FALSE FALSE)
+emuhem_strip_proc_main(proc_audiotx          AudioTXProcessor          TRUE  TRUE)
+emuhem_strip_proc_main(proc_time_sink        TimeSinkProcessor         FALSE FALSE)
+# proc_time_sink.cpp also uses the renamed EventDispatcher statically; the
+# macro only strips main(), so patch the stray reference here.
+file(READ ${PATCHED_FW_DIR}/proc_time_sink.cpp _PTSK)
+string(REPLACE "EventDispatcher::events_flag" "BasebandEventDispatcher::events_flag" _PTSK "${_PTSK}")
+file(WRITE ${PATCHED_FW_DIR}/proc_time_sink.cpp "${_PTSK}")
+emuhem_strip_proc_main(proc_epirb_tx         EPIRBTXProcessor          FALSE FALSE)
+
 # event_m4.hpp: NOT copied in-place. Patched files in PATCHED_FW_DIR include it
 # from their same directory. Other code uses PATCHED_FW_DIR via -I path.
 
@@ -316,6 +522,60 @@ set(EMU_SOURCES
     ${PATCHED_FW_DIR}/proc_am_audio.cpp
     ${PATCHED_FW_DIR}/proc_nfm_audio.cpp
     ${PATCHED_FW_DIR}/proc_wfm_audio.cpp
+
+    # Phase 9: Additional baseband processors + their decoder support files
+    ${PATCHED_FW_DIR}/proc_pocsag2.cpp
+    ${PATCHED_FW_DIR}/proc_tpms.cpp
+    ${PATCHED_FW_DIR}/proc_ert.cpp
+    ${PATCHED_FW_DIR}/proc_ais.cpp
+    ${PATCHED_FW_DIR}/proc_tones.cpp
+    ${PATCHED_FW_DIR}/proc_audio_beep.cpp
+    ${PATCHED_FW_DIR}/proc_siggen.cpp
+    # Decoder support (baseband DSP helpers; packet/decoder .cpp files in
+    # common/ are already picked up by the FW_COMMON_SOURCES glob below).
+    ${FW_DIR}/baseband/channel_decimator.cpp
+    ${FW_DIR}/baseband/matched_filter.cpp
+    ${FW_DIR}/baseband/clock_recovery.cpp
+    ${FW_DIR}/baseband/packet_builder.cpp
+
+    # Phase 10: More baseband processors (8 RX + 6 TX)
+    ${PATCHED_FW_DIR}/proc_afskrx.cpp
+    ${PATCHED_FW_DIR}/proc_aprsrx.cpp
+    ${PATCHED_FW_DIR}/proc_btlerx.cpp
+    ${PATCHED_FW_DIR}/proc_nrfrx.cpp
+    ${PATCHED_FW_DIR}/proc_fsk_rx.cpp
+    ${PATCHED_FW_DIR}/proc_weather.cpp
+    ${PATCHED_FW_DIR}/proc_subghzd.cpp
+    ${PATCHED_FW_DIR}/proc_protoview.cpp
+    ${PATCHED_FW_DIR}/proc_afsk.cpp
+    ${PATCHED_FW_DIR}/proc_fsk.cpp
+    ${PATCHED_FW_DIR}/proc_ook.cpp
+    ${PATCHED_FW_DIR}/proc_ble_tx.cpp
+    ${PATCHED_FW_DIR}/proc_adsbtx.cpp
+    ${PATCHED_FW_DIR}/proc_rds.cpp
+    # Stream input (used by AFSK/APRS/FSK RX processors for the decoded
+    # symbol ring that ships payloads to the M0 application thread).
+    ${FW_DIR}/baseband/stream_input.cpp
+
+    # Phase 11: More baseband processors (9 RX + 9 TX)
+    ${PATCHED_FW_DIR}/proc_acars.cpp
+    ${PATCHED_FW_DIR}/proc_adsbrx.cpp
+    ${PATCHED_FW_DIR}/proc_flex.cpp
+    ${PATCHED_FW_DIR}/proc_sonde.cpp
+    ${PATCHED_FW_DIR}/proc_epirb.cpp
+    ${PATCHED_FW_DIR}/proc_tonedetect.cpp
+    ${PATCHED_FW_DIR}/proc_subcar.cpp
+    ${PATCHED_FW_DIR}/proc_rtty_rx.cpp
+    ${PATCHED_FW_DIR}/proc_morse.cpp
+    ${PATCHED_FW_DIR}/proc_morsetx.cpp
+    ${PATCHED_FW_DIR}/proc_rtty_tx.cpp
+    ${PATCHED_FW_DIR}/proc_jammer.cpp
+    ${PATCHED_FW_DIR}/proc_p25_tx.cpp
+    ${PATCHED_FW_DIR}/proc_gps_sim.cpp
+    ${PATCHED_FW_DIR}/proc_spectrum_painter.cpp
+    ${PATCHED_FW_DIR}/proc_audiotx.cpp
+    ${PATCHED_FW_DIR}/proc_time_sink.cpp
+    ${PATCHED_FW_DIR}/proc_epirb_tx.cpp
 
     # Firmware sources: common layer (compiled as-is)
     ${FW_DIR}/common/lcd_ili9341.cpp
@@ -429,6 +689,13 @@ list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "baseband_dma\\.cpp$")
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "audio_dma\\.cpp$")
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "jammer\\.cpp$")
 list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "msgpack\\.cpp$")
+# gcc.cpp defines its own abort() that infinite-loops calling chSysHalt() — fine
+# on bare-metal ARM where that's terminal, but our shim's chSysHalt calls
+# std::abort which calls back into this abort, stack-overflowing on any panic.
+# Use libc's real abort() instead (raises SIGABRT → our crash handler prints a
+# backtrace and re-raises). __dso_handle / __cxa_pure_virtual / __verbose_
+# terminate_handler are provided by libc++ at link time on macOS/Linux.
+list(FILTER FW_COMMON_SOURCES EXCLUDE REGEX "gcc\\.cpp$")
 
 list(APPEND EMU_SOURCES ${FW_COMMON_SOURCES})
 list(APPEND EMU_SOURCES ${FW_APP_SOURCES}
@@ -462,6 +729,11 @@ set_source_files_properties(
 # Link libraries
 # ---------------------------------------------------------------------------
 target_link_libraries(emuhem PRIVATE SDL3::SDL3)
+
+if(SoapySDR_FOUND)
+    target_link_libraries(emuhem PRIVATE SoapySDR)
+    target_compile_definitions(emuhem PRIVATE EMUHEM_HAS_SOAPYSDR=1)
+endif()
 
 # Allow remaining undefined symbols for excluded apps' vtables + USB serial
 # (not called at runtime -- apps are stubs)

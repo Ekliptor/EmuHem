@@ -58,3 +58,9 @@ bool isLeap(int year) { return leap_year(static_cast<uint16_t>(year)); }
 time_t rtcToUnixUTC(const rtc::RTC&) { return std::time(nullptr); }
 
 } // namespace rtc_time
+
+// EmuHem: Timestamp aliases lpc43xx::rtc::RTC on the M0 branch. Baseband
+// packet builders (TPMS/AIS/ERT/POCSAG) call Timestamp::now(), so provide it.
+namespace lpc43xx { namespace rtc {
+RTC RTC::now() { return rtc_time::now(); }
+}}
