@@ -553,3 +553,40 @@ int chsnprintf(char* buf, size_t size, const char* fmt, ...) {
     va_end(ap);
     return r;
 }
+
+// ---------------------------------------------------------------------------
+// RTC driver stubs
+// ---------------------------------------------------------------------------
+#include "lpc43xx_cpp.hpp"
+
+void rtcGetTime(RTCDriver*, RTCTime* timespec) {
+    if (timespec) {
+        std::time_t t = std::time(nullptr);
+        struct std::tm* tm = std::localtime(&t);
+        timespec->tv_date = (static_cast<uint32_t>(tm->tm_year + 1900) << 16)
+                          | (static_cast<uint32_t>(tm->tm_mon + 1) << 8)
+                          | static_cast<uint32_t>(tm->tm_mday);
+        timespec->tv_time = (static_cast<uint32_t>(tm->tm_hour) << 16)
+                          | (static_cast<uint32_t>(tm->tm_min) << 8)
+                          | static_cast<uint32_t>(tm->tm_sec);
+    }
+}
+
+void rtcSetTime(RTCDriver*, const RTCTime*) {}
+
+void rtcGetTime(RTCDriver*, lpc43xx::rtc::RTC* datetime) {
+    if (datetime) {
+        std::time_t t = std::time(nullptr);
+        struct std::tm* tm = std::localtime(&t);
+        *datetime = lpc43xx::rtc::RTC{
+            static_cast<uint32_t>(tm->tm_year + 1900),
+            static_cast<uint32_t>(tm->tm_mon + 1),
+            static_cast<uint32_t>(tm->tm_mday),
+            static_cast<uint32_t>(tm->tm_hour),
+            static_cast<uint32_t>(tm->tm_min),
+            static_cast<uint32_t>(tm->tm_sec)
+        };
+    }
+}
+
+void rtcSetTime(RTCDriver*, const lpc43xx::rtc::RTC*) {}

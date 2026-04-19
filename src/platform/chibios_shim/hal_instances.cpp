@@ -20,3 +20,7 @@ LPC_ADC_T lpc_adc0{};
 LPC_ADC_T lpc_adc1{};
 LPC_RTC_T lpc_rtc{};
 LPC_WWDT_T lpc_wwdt{};
+LPC_I2S_T lpc_i2s0{};
+
+// ChibiOS driver instances
+RTCDriver RTCD1{};

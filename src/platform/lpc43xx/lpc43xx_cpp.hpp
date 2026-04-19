@@ -9,6 +9,9 @@
 #include <hal.h>
 #include "utility.hpp"
 
+// Bridge for M0→M4 signaling: set by BasebandEventDispatcher::run()
+extern Thread* g_m4_event_thread;
+
 namespace lpc43xx {
 
 namespace creg {
@@ -29,7 +32,12 @@ namespace m0apptxevent {
 
 inline void enable() {}
 inline void disable() {}
-inline void assert_event() {}
+inline void assert_event() {
+    // Signal the M4 event dispatcher thread (EVT_MASK_BASEBAND = EVENT_MASK(0) = 1)
+    if (g_m4_event_thread) {
+        chEvtSignal(g_m4_event_thread, 1U);
+    }
+}
 
 inline void clear() {
     LPC_CREG->M0APPTXEVENT = 0;
@@ -360,6 +368,11 @@ static inline uint32_t __REV(uint32_t val) {
 static inline uint16_t __REV16(uint16_t val) {
     return __builtin_bswap16(val);
 }
+
+// SIMD pointer access macro (used by DSP code to read packed 16-bit I/Q pairs)
+#define __SIMD32_TYPE int32_t
+#define __SIMD32(addr) (*(reinterpret_cast<__SIMD32_TYPE**>(&(addr))))
+
 #endif // !__arm__
 
 // IRQ number stubs

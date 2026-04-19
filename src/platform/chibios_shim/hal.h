@@ -264,6 +264,26 @@ struct LPC_RTC_T {
 };
 
 // ---------------------------------------------------------------------------
+// LPC43xx I2S stub
+// ---------------------------------------------------------------------------
+struct LPC_I2S_T {
+    uint32_t DAO{0};
+    uint32_t DAI{0};
+    uint32_t TXFIFO{0};
+    uint32_t RXFIFO{0};
+    uint32_t STAT{0};
+    uint32_t DMA1{0};
+    uint32_t DMA2{0};
+    uint32_t IRQ{0};
+    uint32_t TXRATE{0};
+    uint32_t RXRATE{0};
+    uint32_t TXBITRATE{0};
+    uint32_t RXBITRATE{0};
+    uint32_t TXMODE{0};
+    uint32_t RXMODE{0};
+};
+
+// ---------------------------------------------------------------------------
 // LPC43xx WWDT stub
 // ---------------------------------------------------------------------------
 struct LPC_WWDT_T {
@@ -296,6 +316,7 @@ extern LPC_ADC_T lpc_adc0;
 extern LPC_ADC_T lpc_adc1;
 extern LPC_RTC_T lpc_rtc;
 extern LPC_WWDT_T lpc_wwdt;
+extern LPC_I2S_T lpc_i2s0;
 
 #define LPC_GPIO    (&lpc_gpio)
 #define LPC_CGU     (&lpc_cgu)
@@ -314,6 +335,8 @@ extern LPC_WWDT_T lpc_wwdt;
 #define LPC_ADC1    (&lpc_adc1)
 #define LPC_RTC     (&lpc_rtc)
 #define LPC_WWDT    (&lpc_wwdt)
+#define LPC_I2S0    (&lpc_i2s0)
+#define LPC_I2S1    (&lpc_i2s0)  /* alias -- only one I2S instance in emulator */
 
 // ---------------------------------------------------------------------------
 // HAL system clock (no-op in emulation)

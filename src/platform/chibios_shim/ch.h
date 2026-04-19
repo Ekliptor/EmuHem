@@ -85,6 +85,13 @@ using ioportmask_t = uint32_t;
 // Time constants and macros
 // ---------------------------------------------------------------------------
 #define CH_FREQUENCY 1000
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
 #define TIME_IMMEDIATE  ((systime_t)0)
 #define TIME_INFINITE   ((systime_t)-1)
 
@@ -233,6 +240,7 @@ using tfunc_t = msg_t(*)(void*);
 Thread* chThdCreateStatic(void* wsp, size_t size, tprio_t prio, tfunc_t pf, void* arg);
 Thread* chThdCreateFromHeap(void* heap, size_t size, tprio_t prio, tfunc_t pf, void* arg);
 Thread* chThdSelf(void);
+inline void chRegSetThreadName(const char*) {}
 void chThdExit(msg_t msg);
 void chThdTerminate(Thread* tp);
 msg_t chThdWait(Thread* tp);
@@ -380,8 +388,16 @@ struct BaseChannel {
     const void* vmt{nullptr};
 };
 
+// ChibiOS HAL channel VMT macro (used as struct body in firmware headers)
+#define _base_asynchronous_channel_methods \
+    void* _dummy_vmt;
+
+struct BaseAsynchronousChannelVMT {
+    _base_asynchronous_channel_methods
+};
+
 struct BaseAsynchronousChannel {
-    const void* vmt{nullptr};
+    const BaseAsynchronousChannelVMT* vmt{nullptr};
     EventSource event{};
 };
 
@@ -424,6 +440,24 @@ bool sdcConnect(SDCDriver* sdcp);
 bool sdcDisconnect(SDCDriver* sdcp);
 void sdcStart(SDCDriver* sdcp, const SDCConfig* config);
 void sdcStop(SDCDriver* sdcp);
+inline bool sdcIsCardInserted(SDCDriver*) { return true; }
+
+// ---------------------------------------------------------------------------
+// RTC driver stubs
+// ---------------------------------------------------------------------------
+struct RTCTime {
+    uint32_t tv_date{0};
+    uint32_t tv_time{0};
+};
+
+struct RTCDriver {
+    int dummy{0};
+};
+
+extern RTCDriver RTCD1;
+
+void rtcGetTime(RTCDriver* rtcp, RTCTime* timespec);
+void rtcSetTime(RTCDriver* rtcp, const RTCTime* timespec);
 bool sdcRead(SDCDriver* sdcp, uint32_t startblk, uint8_t* buf, uint32_t n);
 bool sdcWrite(SDCDriver* sdcp, uint32_t startblk, const uint8_t* buf, uint32_t n);
 bool sdcGetInfo(SDCDriver* sdcp, void* info);
@@ -431,6 +465,13 @@ bool sdcGetInfo(SDCDriver* sdcp, void* info);
 // ---------------------------------------------------------------------------
 // I2C driver stub
 // ---------------------------------------------------------------------------
+using i2caddr_t = uint8_t;
+
+#define I2CD_NO_ERROR   0
+#define I2CD_BUS_ERROR  1
+#define I2CD_ACK_FAILURE 2
+#define I2CD_TIMEOUT    3
+
 struct I2CConfig {
     int dummy{0};
 };
@@ -553,6 +594,12 @@ int chsnprintf(char* buf, size_t size, const char* fmt, ...);
 
 #ifdef __cplusplus
 }
+
+// C++ overloads for RTC functions with lpc43xx::rtc::RTC type
+// (firmware uses this instead of RTCTime because HAL_USE_RTC=0)
+namespace lpc43xx { namespace rtc { struct RTC; } }
+void rtcGetTime(RTCDriver* rtcp, lpc43xx::rtc::RTC* datetime);
+void rtcSetTime(RTCDriver* rtcp, const lpc43xx::rtc::RTC* datetime);
 #endif
 
 #endif /* _CH_H_ */
