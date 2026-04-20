@@ -326,7 +326,13 @@ file(WRITE ${PATCHED_FW_DIR}/proc_siggen.cpp "${_PSIG}")
 
 macro(emuhem_strip_proc_main proc_basename class_name has_audio_init has_blank_line)
     file(READ ${FW_DIR}/baseband/${proc_basename}.cpp _PATCH_TMP)
-    if(${has_audio_init})
+    if("${has_audio_init}" STREQUAL "IN")
+        # Phase 17: proc_mictx variant -- init_audio_in() instead of _out().
+        string(REPLACE
+            "int main() {\n    audio::dma::init_audio_in();\n\n    EventDispatcher event_dispatcher{std::make_unique<${class_name}>()};\n    event_dispatcher.run();\n    return 0;\n}"
+            "// main() removed for EmuHem -- processor is instantiated via registry"
+            _PATCH_TMP "${_PATCH_TMP}")
+    elseif("${has_audio_init}" STREQUAL "TRUE")
         if(${has_blank_line})
             string(REPLACE
                 "int main() {\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<${class_name}>()};\n    event_dispatcher.run();\n    return 0;\n}"
@@ -383,6 +389,17 @@ emuhem_strip_proc_main(proc_ook       OOKProcessor      FALSE FALSE)
 emuhem_strip_proc_main(proc_ble_tx    BTLETxProcessor   FALSE FALSE)
 emuhem_strip_proc_main(proc_adsbtx    ADSBTXProcessor   FALSE FALSE)
 emuhem_strip_proc_main(proc_rds       RDSProcessor      FALSE FALSE)
+# RDSProcessor::execute() has no `if (!configured) return;` guard and
+# dereferences the null `rdsdata` pointer before on_message() populates it
+# from shared_memory.bb_data. On target, reset RAM reads as zeros so the null
+# deref is silently benign; on x86 it SEGVs. Patch the first line of
+# execute() to early-return until configured.
+file(READ ${PATCHED_FW_DIR}/proc_rds.cpp _PRDSC)
+string(REPLACE
+    "void RDSProcessor::execute(const buffer_c8_t& buffer) {\n    for (size_t i = 0;"
+    "void RDSProcessor::execute(const buffer_c8_t& buffer) {\n    if (!configured) return;  // EmuHem: rdsdata is null until on_message\n    for (size_t i = 0;"
+    _PRDSC "${_PRDSC}")
+file(WRITE ${PATCHED_FW_DIR}/proc_rds.cpp "${_PRDSC}")
 
 # ---------------------------------------------------------------------------
 # Phase 11: More baseband processors (9 RX + 9 TX)
@@ -435,6 +452,61 @@ file(READ ${PATCHED_FW_DIR}/proc_time_sink.cpp _PTSK)
 string(REPLACE "EventDispatcher::events_flag" "BasebandEventDispatcher::events_flag" _PTSK "${_PTSK}")
 file(WRITE ${PATCHED_FW_DIR}/proc_time_sink.cpp "${_PTSK}")
 emuhem_strip_proc_main(proc_epirb_tx         EPIRBTXProcessor          FALSE FALSE)
+
+# ---------------------------------------------------------------------------
+# Phase 17: capture / replay / MicTX processors
+# ---------------------------------------------------------------------------
+
+# proc_capture.hpp: rename MultiDecimator -> CaptureMultiDecimator. Same
+# collision pattern as Phase 10's proc_fsk_rx.hpp fix -- both proc_wfm_audio
+# and proc_capture define a global-scope MultiDecimator<...> class template;
+# on target each processor is its own binary so no conflict, but in EmuHem
+# the registry pulls both classes into the same TU (core_control_emu.cpp).
+# Rename only the capture variant; proc_capture.cpp is compiled from
+# PATCHED_FW_DIR so its same-dir include resolves to the patched header.
+file(READ ${FW_DIR}/baseband/proc_capture.hpp _PCAPH)
+string(REPLACE "class MultiDecimator {" "class __SENTINEL_CMD__ {" _PCAPH "${_PCAPH}")
+string(REPLACE "MultiDecimator<" "__SENTINEL_CMD__<" _PCAPH "${_PCAPH}")
+string(REPLACE "__SENTINEL_CMD__" "CaptureMultiDecimator" _PCAPH "${_PCAPH}")
+# Same collision on the sister class NoopDecim (also defined globally in
+# proc_fsk_rx.hpp). Rename only in capture's copy; proc_capture.cpp is
+# patched to match below.
+string(REPLACE "class NoopDecim {" "class __SENTINEL_ND__ {" _PCAPH "${_PCAPH}")
+string(REPLACE "NoopDecim>" "__SENTINEL_ND__>" _PCAPH "${_PCAPH}")
+string(REPLACE "__SENTINEL_ND__" "CaptureNoopDecim" _PCAPH "${_PCAPH}")
+file(WRITE ${PATCHED_FW_DIR}/proc_capture.hpp "${_PCAPH}")
+
+emuhem_strip_proc_main(proc_capture CaptureProcessor TRUE FALSE)
+emuhem_strip_proc_main(proc_replay  ReplayProcessor  FALSE FALSE)
+emuhem_strip_proc_main(proc_mictx   MicTXProcessor   IN    FALSE)
+
+# proc_capture.cpp references NoopDecim by name (template arg). The macro
+# only stripped main(); patch the references in the body to match the
+# renamed class in proc_capture.hpp.
+file(READ ${PATCHED_FW_DIR}/proc_capture.cpp _PCAPC)
+string(REPLACE "decim_1.set<NoopDecim>" "decim_1.set<CaptureNoopDecim>" _PCAPC "${_PCAPC}")
+file(WRITE ${PATCHED_FW_DIR}/proc_capture.cpp "${_PCAPC}")
+
+# ---------------------------------------------------------------------------
+# Phase 18: image RX/TX processors + test processor
+# SSTV RX/TX, WEFAX RX, NOAA APT RX, TestProcessor.
+# ---------------------------------------------------------------------------
+
+emuhem_strip_proc_main(proc_sstvtx     SSTVTXProcessor FALSE FALSE)
+emuhem_strip_proc_main(proc_wefaxrx    WeFaxRx         TRUE  FALSE)
+emuhem_strip_proc_main(proc_noaaapt_rx NoaaAptRx       TRUE  FALSE)
+emuhem_strip_proc_main(proc_test       TestProcessor   FALSE FALSE)
+
+# proc_sstvrx.cpp main() starts with a `// Initialize audio DMA` comment
+# between `int main() {` and `audio::dma::init_audio_out();`, so the macro's
+# REPLACE pattern doesn't match. Patch directly.
+file(READ ${FW_DIR}/baseband/proc_sstvrx.cpp _PSSRX)
+string(REPLACE
+    "int main() {\n    // Initialize audio DMA\n    audio::dma::init_audio_out();\n\n    EventDispatcher event_dispatcher{std::make_unique<SSTVRXProcessor>()};\n    event_dispatcher.run();\n    return 0;\n}"
+    "// main() removed for EmuHem -- processor is instantiated via registry"
+    _PSSRX "${_PSSRX}")
+string(REPLACE "constexpr size_t " "const size_t " _PSSRX "${_PSSRX}")
+file(WRITE ${PATCHED_FW_DIR}/proc_sstvrx.cpp "${_PSSRX}")
 
 # event_m4.hpp: NOT copied in-place. Patched files in PATCHED_FW_DIR include it
 # from their same directory. Other code uses PATCHED_FW_DIR via -I path.
@@ -519,6 +591,7 @@ set(EMU_SOURCES
     ${FW_DIR}/baseband/audio_output.cpp
     ${FW_DIR}/baseband/audio_compressor.cpp
     ${FW_DIR}/baseband/audio_stats_collector.cpp
+    ${FW_DIR}/baseband/dsp_squelch.cpp
     ${PATCHED_FW_DIR}/proc_am_audio.cpp
     ${PATCHED_FW_DIR}/proc_nfm_audio.cpp
     ${PATCHED_FW_DIR}/proc_wfm_audio.cpp
@@ -576,6 +649,26 @@ set(EMU_SOURCES
     ${PATCHED_FW_DIR}/proc_audiotx.cpp
     ${PATCHED_FW_DIR}/proc_time_sink.cpp
     ${PATCHED_FW_DIR}/proc_epirb_tx.cpp
+
+    # Phase 17: capture / replay / MicTX processors
+    ${PATCHED_FW_DIR}/proc_capture.cpp
+    ${PATCHED_FW_DIR}/proc_replay.cpp
+    ${PATCHED_FW_DIR}/proc_mictx.cpp
+    # dsp::modulate::FM and SSB (in dsp_modulate.cpp, already compiled for audio
+    # procs) use ToneGen for tone key / CTCSS mix. MicTX's AudioTXConfig message
+    # path calls tone_gen.configure -- without tone_gen.cpp the symbol resolves
+    # to 0x0 under Apple ld's permissive linkage and crashes on first message.
+    ${FW_DIR}/baseband/tone_gen.cpp
+    # AudioInput::read_audio_buffer: consumes rx_empty_buffer() samples and
+    # copies the right channel into an s16 buffer. Used by MicTX::execute.
+    ${FW_DIR}/baseband/audio_input.cpp
+
+    # Phase 18: image RX/TX + test processor
+    ${PATCHED_FW_DIR}/proc_sstvrx.cpp
+    ${PATCHED_FW_DIR}/proc_sstvtx.cpp
+    ${PATCHED_FW_DIR}/proc_wefaxrx.cpp
+    ${PATCHED_FW_DIR}/proc_noaaapt_rx.cpp
+    ${PATCHED_FW_DIR}/proc_test.cpp
 
     # Firmware sources: common layer (compiled as-is)
     ${FW_DIR}/common/lcd_ili9341.cpp
@@ -768,3 +861,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         -Wno-invalid-constexpr -Wno-absolute-value
     )
 endif()
+
+# ---------------------------------------------------------------------------
+# Unit tests (Phase 13)
+# ---------------------------------------------------------------------------
+enable_testing()
+add_subdirectory(tests)

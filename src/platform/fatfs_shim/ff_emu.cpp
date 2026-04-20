@@ -676,20 +676,40 @@ FRESULT f_getcwd(TCHAR* buff, UINT len) {
 }
 
 FRESULT f_getfree(const TCHAR*, DWORD* nclst, FATFS** fatfs) {
+    // Firmware `std::filesystem::space()` dereferences the returned FATFS* to
+    // compute cluster_bytes = fs->csize * _MIN_SS and total_bytes via
+    // fs->n_fatent. With a nullptr return that crashes. Back the pointer with
+    // a process-wide static so the fields are live. csize=1 means "1 sector
+    // per cluster" so *nclst below can be reported in 512-byte units without
+    // scaling.
+    static FATFS g_emu_fatfs{};
+    static bool initialized = false;
+    if (!initialized) {
+        std::memset(&g_emu_fatfs, 0, sizeof(g_emu_fatfs));
+        g_emu_fatfs.csize = 1;  // one sector per cluster; _MIN_SS = 512
+        initialized = true;
+    }
+
     sdcard_root();
-    if (fatfs) *fatfs = nullptr;
+    if (fatfs) *fatfs = &g_emu_fatfs;
 
     struct statvfs vfs {};
     if (::statvfs(sdcard_root().c_str(), &vfs) != 0) {
         if (nclst) *nclst = 0;
+        g_emu_fatfs.n_fatent = 2;  // forces "total bytes = 0" via (n_fatent - 2)
         return FR_DISK_ERR;
     }
-    // Report free blocks; firmware divides by "sectors per cluster" = 1 for display.
-    if (nclst) {
-        uint64_t free_bytes = static_cast<uint64_t>(vfs.f_bavail) * vfs.f_frsize;
-        // Expose as 512-byte clusters so UI shows something sensible.
-        *nclst = static_cast<DWORD>(std::min<uint64_t>(free_bytes / 512, 0xFFFFFFFFu));
-    }
+
+    // Report free/total sizes. Firmware uses fs->csize (=1) * 512 as
+    // cluster_bytes, fs->n_fatent - 2 as total cluster count, and *nclst as
+    // free cluster count.
+    const uint64_t sector_bytes = 512;
+    const uint64_t total_bytes = static_cast<uint64_t>(vfs.f_blocks) * vfs.f_frsize;
+    const uint64_t free_bytes  = static_cast<uint64_t>(vfs.f_bavail) * vfs.f_frsize;
+    const uint64_t total_clusters = std::min<uint64_t>(total_bytes / sector_bytes, 0xFFFFFFFFu - 2);
+    const uint64_t free_clusters  = std::min<uint64_t>(free_bytes  / sector_bytes, 0xFFFFFFFFu);
+    if (nclst) *nclst = static_cast<DWORD>(free_clusters);
+    g_emu_fatfs.n_fatent = static_cast<DWORD>(total_clusters + 2);
     return FR_OK;
 }
 

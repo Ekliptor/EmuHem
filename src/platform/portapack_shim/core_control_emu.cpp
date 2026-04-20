@@ -3,6 +3,7 @@
 
 #include "core_control.hpp"
 #include "baseband_processor.hpp"
+#include "baseband_api.hpp"
 #include "event_m4.hpp"
 #include "proc_wideband_spectrum.hpp"
 #include "proc_am_audio.hpp"
@@ -47,14 +48,25 @@
 #include "proc_audiotx.hpp"
 #include "proc_time_sink.hpp"
 #include "proc_epirb_tx.hpp"
+#include "proc_capture.hpp"
+#include "proc_replay.hpp"
+#include "proc_mictx.hpp"
+#include "proc_sstvrx.hpp"
+#include "proc_sstvtx.hpp"
+#include "proc_wefaxrx.hpp"
+#include "proc_noaaapt_rx.hpp"
+#include "proc_test.hpp"
 #include "spi_image.hpp"
 #include "portapack_shared_memory.hpp"
 #include "ch.h"
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -65,6 +77,13 @@ extern "C" uint32_t _textend = 0;
 
 // Bridge for M0→M4 signaling (referenced by lpc43xx_cpp.hpp)
 Thread* g_m4_event_thread = nullptr;
+
+// Exported to main_emu.cpp so it can trigger firmware's own baseband shutdown
+// path after event_dispatcher.run() returns. Lives here because this TU
+// already brings in baseband_api.hpp and knows the firmware namespace.
+void emuhem_shutdown_baseband() {
+    baseband::shutdown();
+}
 
 // ============================================================================
 // Processor registry
@@ -185,9 +204,28 @@ static std::vector<ProcessorEntry>& registry() {
         r.push_back({image_tag_epirb_tx,
             []() { return std::make_unique<EPIRBTXProcessor>(); }});
 
-        // ToDo: remaining -- SSTV RX/TX, WEFAX RX, NOAA APT, capture/replay,
-        //       AM TV, mictx, bint_stream_tx, test, sigfrx, flash_utility,
-        //       sd_over_usb.
+        // Phase 17: capture/replay/mictx
+        r.push_back({image_tag_capture,
+            []() { return std::make_unique<CaptureProcessor>(); }});
+        r.push_back({image_tag_replay,
+            []() { return std::make_unique<ReplayProcessor>(); }});
+        r.push_back({image_tag_mic_tx,
+            []() { return std::make_unique<MicTXProcessor>(); }});
+
+        // Phase 18: image RX/TX + test processor
+        r.push_back({image_tag_sstv_rx,
+            []() { return std::make_unique<SSTVRXProcessor>(); }});
+        r.push_back({image_tag_sstv_tx,
+            []() { return std::make_unique<SSTVTXProcessor>(); }});
+        r.push_back({image_tag_wefaxrx,
+            []() { return std::make_unique<WeFaxRx>(); }});
+        r.push_back({image_tag_noaaapt_rx,
+            []() { return std::make_unique<NoaaAptRx>(); }});
+        r.push_back({image_tag_test,
+            []() { return std::make_unique<TestProcessor>(); }});
+
+        // ToDo: remaining -- AM TV, bint_stream_tx, sigfrx,
+        //       flash_utility, sd_over_usb.
     }
     return r;
 }
@@ -204,6 +242,18 @@ static ProcessorFactory* find_processor(const image_tag_t& tag) {
 // ============================================================================
 
 static std::thread* g_m4_thread = nullptr;
+
+// Startup rendezvous: m4_init() must not return until the newly spawned M4
+// event dispatcher has installed `g_m4_event_thread` and is ready to dequeue
+// `shared_memory.baseband_message`. Without this, the firmware's first
+// baseband::send_message() call after run_image() can land before the new
+// dispatcher is listening, causing the M0 spin-wait to time out and panic
+// with "Baseband Send Fail". The firmware already spin-waits on
+// `shared_memory.baseband_ready` but under desktop OS scheduling that's not
+// always sufficient — promote it to a proper mutex+CV rendezvous here.
+static std::mutex g_m4_ready_mutex;
+static std::condition_variable g_m4_ready_cv;
+static bool g_m4_ready = false;
 
 static void shutdown_m4_thread() {
     if (!g_m4_thread) return;
@@ -224,6 +274,18 @@ static void shutdown_m4_thread() {
     g_m4_thread = nullptr;
     g_m4_event_thread = nullptr;
 
+    // Clear any stale state the old dispatcher left in shared memory. In
+    // particular `baseband_message` may still point at `shutdown_msg` if the
+    // old dispatcher's Shutdown handler exited before reaching the
+    // post-patched clear — and the next dispatcher must start with a clean
+    // slate so it doesn't immediately re-consume the stale message.
+    shared_memory.baseband_message = nullptr;
+    shared_memory.clear_baseband_ready();
+    {
+        std::lock_guard<std::mutex> lk(g_m4_ready_mutex);
+        g_m4_ready = false;
+    }
+
     std::fprintf(stderr, "[EmuHem] M4 thread stopped\n");
 }
 
@@ -238,6 +300,11 @@ void m4_init(const image_tag_t tag,
         std::fprintf(stderr, "[EmuHem] m4_init: unregistered processor tag\n");
         // Set baseband_ready to avoid run_image() hanging
         shared_memory.set_baseband_ready();
+        {
+            std::lock_guard<std::mutex> lk(g_m4_ready_mutex);
+            g_m4_ready = true;
+        }
+        g_m4_ready_cv.notify_all();
         return;
     }
 
@@ -251,13 +318,39 @@ void m4_init(const image_tag_t tag,
         // Create the processor (constructor auto-starts BasebandThread + RSSIThread)
         auto processor = factory();
 
-        // Create and run the M4 event dispatcher
-        // (sets baseband_ready, processes messages until shutdown)
+        // Mark ready once the processor is constructed AND we are about to
+        // enter the event loop. The patched BasebandEventDispatcher::run()
+        // installs `g_m4_event_thread` and sets `shared_memory.baseband_ready`
+        // at the top of the loop, so by the time the notify wakes m4_init the
+        // dispatcher is guaranteed listening.
         BasebandEventDispatcher dispatcher{std::move(processor)};
+        {
+            std::lock_guard<std::mutex> lk(g_m4_ready_mutex);
+            g_m4_ready = true;
+        }
+        g_m4_ready_cv.notify_all();
+
         dispatcher.run();
 
         std::fprintf(stderr, "[EmuHem] M4 event dispatcher exited\n");
     });
+
+    // Block the M0 caller until the new dispatcher has been constructed. The
+    // OS scheduler still decides when the M4 thread actually reaches
+    // `chEvtWaitAny`, but since `dispatcher.run()` installs
+    // `g_m4_event_thread` before waiting, any message the M0 sends after we
+    // return will deliver correctly (either the M4 is already in wait() and
+    // is woken directly, or it's about to enter wait() and will see the
+    // already-pending event on entry). Timeout guards against factory
+    // constructors that deadlock — 5s is generous for all registered
+    // processors.
+    std::unique_lock<std::mutex> lk(g_m4_ready_mutex);
+    if (!g_m4_ready_cv.wait_for(lk, std::chrono::seconds(5),
+                                [] { return g_m4_ready; })) {
+        std::fprintf(stderr,
+                     "[EmuHem] m4_init: timed out waiting for M4 dispatcher "
+                     "to become ready — processor factory may be deadlocked\n");
+    }
 }
 
 void m4_init_prepared(const uint32_t, const bool) {

@@ -109,6 +109,18 @@ void init_audio_in() {}
 void init_audio_out() {
     if (g_audio_inited.load()) return;
 
+    // EMUHEM_NO_AUDIO_OUT=1 disables SDL audio output (samples silently drop).
+    // Used by integration tests to avoid back-to-back CoreAudio device
+    // contention when multiple emuhem processes run in sequence — the
+    // default playback device handle doesn't always release fast enough.
+    if (const char* no_audio = std::getenv("EMUHEM_NO_AUDIO_OUT");
+        no_audio && std::string_view{no_audio} == "1") {
+        std::fprintf(stderr,
+            "[EmuHem] audio::dma::init_audio_out: SDL audio disabled by EMUHEM_NO_AUDIO_OUT\n");
+        g_audio_inited.store(true);  // pretend we're up so write() early-returns
+        return;
+    }
+
     SDL_AudioSpec spec{};
     spec.format = SDL_AUDIO_S16LE;
     spec.channels = 2;

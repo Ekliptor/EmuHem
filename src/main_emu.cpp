@@ -119,9 +119,43 @@ static void firmware_thread_fn() {
 
     std::fprintf(stdout, "[EmuHem] Entering firmware event loop\n");
 
+    // --app=<name>: jump directly to a firmware app, bypassing menu navigation.
+    // Uses the firmware's own id-based lookup (ui_navigation.cpp::appList). The
+    // same mechanism usb_serial_shell uses, so every id listed in appList with
+    // a non-null name is launchable (e.g. "audio", "adsbrx", "pocsag",
+    // "spectrum", "aprsrx", …).
+    if (const char* app_name = std::getenv("EMUHEM_APP"); app_name && *app_name) {
+        auto* nav = system_view.get_navigation_view();
+        if (nav && nav->StartAppByName(app_name)) {
+            std::fprintf(stdout, "[EmuHem] --app: launched '%s'\n", app_name);
+        } else {
+            std::fprintf(stderr,
+                         "[EmuHem] --app: unknown app id '%s' (check the "
+                         "appList in ui_navigation.cpp for valid ids)\n",
+                         app_name);
+        }
+    }
+
     // Run the firmware's main event loop
     // This blocks until EventDispatcher::request_stop() is called
     event_dispatcher.run();
+
+    // TX-shutdown-latency mitigation: the baseband M4 thread keeps pumping
+    // samples until a ShutdownMessage arrives. Normally that happens when
+    // the current view's destructor runs (e.g. ~APRSTXView calls
+    // baseband::shutdown()), but those destructors only run at static
+    // teardown after main() returns. Under sequential CTest load, the idle
+    // TX pump can delay process exit past the test's `timeout 60` wrapper.
+    //
+    // Send the ShutdownMessage here via the firmware's own baseband::shutdown
+    // API, which is guarded by `baseband_image_running` and is a no-op if no
+    // image is running (e.g. utility apps like notepad). The M4 dispatcher
+    // consumes the message, BasebandThread exits its loop, and the process
+    // shuts down promptly. No join: the M4 std::thread is owned by a heap
+    // pointer in core_control_emu.cpp and continues cleanup while main joins
+    // the firmware thread.
+    extern void emuhem_shutdown_baseband();
+    emuhem_shutdown_baseband();
 
     g_firmware_running.store(false);
     event_dispatcher_ptr = nullptr;
@@ -220,6 +254,7 @@ struct CliOptions {
     bool no_bezel = false;        // --bezel=0 overrides default bezel
     std::string keys;             // scripted keystrokes
     int key_step_ms = 180;        // delay between scripted key press/release
+    std::string fb_dump;          // --fb-dump=PATH: write final framebuffer as raw RGB565
 };
 
 void print_help(const char* argv0) {
@@ -257,6 +292,19 @@ void print_help(const char* argv0) {
         "  --sdcard-root=PATH     Override ~/.emuhem/sdcard.\n"
         "  --pmem-file=PATH       Override ~/.emuhem/pmem_settings.bin.\n"
         "\n"
+        "App launch:\n"
+        "  --app=ID               Launch a firmware app directly, skipping menu navigation.\n"
+        "                         Example ids: audio, adsbrx, ais, pocsag, aprsrx, weather,\n"
+        "                         search, lookingglass, recon, capture, replay, aprstx,\n"
+        "                         bletx, ooktx, rdstx, microphone, filemanager, freqman,\n"
+        "                         iqtrim, notepad. Full list in the firmware's\n"
+        "                         ui_navigation.cpp `appList`.\n"
+        "\n"
+        "Test harness:\n"
+        "  --fb-dump=PATH         Write the final LCD framebuffer as raw RGB565\n"
+        "                         (240*320*2 = 153600 bytes) to PATH on shutdown.\n"
+        "                         Used by integration tests to assert rendering happened.\n"
+        "\n"
         "Scripted input:\n"
         "  --keys=STRING          Play a keystroke sequence once the UI is ready. Chars:\n"
         "                           U/D/L/R = d-pad   S = Select   B = Back\n"
@@ -267,8 +315,9 @@ void print_help(const char* argv0) {
         "Examples:\n"
         "  %s --headless --duration=5 --keys='DDS' --iq-file=capture.cu8\n"
         "  %s --bezel=0 --rtl-tcp-server=0.0.0.0:1234\n"
-        "  %s --soapy='driver=hackrf' --soapy-rate=8000000 --soapy-freq=915000000\n",
-        argv0, argv0, argv0, argv0);
+        "  %s --soapy='driver=hackrf' --soapy-rate=8000000 --soapy-freq=915000000\n"
+        "  %s --app=audio --iq-file=capture.cu8\n",
+        argv0, argv0, argv0, argv0, argv0);
 }
 
 bool parse_int(std::string_view s, int& out) {
@@ -331,6 +380,8 @@ bool parse_cli(int argc, char** argv, CliOptions& opts) {
         if (takes("rtl-tcp-server"))     { ::setenv("EMUHEM_RTL_TCP_SERVER", v.c_str(), 1); continue; }
         if (takes("sdcard-root"))        { ::setenv("EMUHEM_SDCARD_ROOT", v.c_str(), 1); continue; }
         if (takes("pmem-file"))          { ::setenv("EMUHEM_PMEM_FILE", v.c_str(), 1); continue; }
+        if (takes("app"))                { ::setenv("EMUHEM_APP", v.c_str(), 1); continue; }
+        if (takes("fb-dump"))            { opts.fb_dump = v; continue; }
         if (takes("keys"))               { opts.keys = v; continue; }
         if (takes("key-step")) {
             if (!parse_int(v, opts.key_step_ms) || opts.key_step_ms < 1) {
@@ -383,6 +434,42 @@ void install_crash_handler() {
     sa.sa_flags = SA_RESETHAND | SA_NODEFER;
     sigemptyset(&sa.sa_mask);
     for (int sig : {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT}) {
+        ::sigaction(sig, &sa, nullptr);
+    }
+}
+
+// Termination signals: SIGTERM (polite kill), SIGINT (Ctrl-C), SIGHUP (parent
+// shell disconnect). Flip the quit flag so the main loop drops out of its
+// SDL/headless sleep and runs the normal shutdown path (joins threads, flushes
+// TX sinks, destroys SDL). Second signal of the same kind forces an exit so a
+// stuck shutdown path can always be killed with two Ctrl-C's.
+void termination_handler(int sig) {
+    static std::atomic<int> s_count{0};
+    const int n = s_count.fetch_add(1) + 1;
+    // Async-signal-safe stderr write.
+    const char* msg = (sig == SIGINT)
+                          ? (n == 1 ? "\n[EmuHem] SIGINT — requesting shutdown (Ctrl-C again to force)\n"
+                                    : "\n[EmuHem] SIGINT again — forcing exit\n")
+                          : (n == 1 ? "\n[EmuHem] termination signal — requesting shutdown\n"
+                                    : "\n[EmuHem] termination signal again — forcing exit\n");
+    (void)!::write(STDERR_FILENO, msg, std::strlen(msg));
+    g_quit_requested.store(true);
+    if (n >= 2) {
+        // Restore default handler and re-raise so the OS can terminate us
+        // even if main-thread shutdown is wedged.
+        std::signal(sig, SIG_DFL);
+        std::raise(sig);
+    }
+}
+
+void install_termination_handler() {
+    struct sigaction sa{};
+    sa.sa_handler = termination_handler;
+    // No SA_RESETHAND — we want the handler to stay installed so a second
+    // signal can escalate to force-exit via the n>=2 branch.
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    for (int sig : {SIGTERM, SIGINT, SIGHUP}) {
         ::sigaction(sig, &sa, nullptr);
     }
 }
@@ -457,7 +544,13 @@ void scripted_keys_thread_fn(std::string keys, int step_ms) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
+    // Line-buffer stdout even when redirected, so integration tests and
+    // timed-shutdown diagnostics (--duration elapsed, Shutting down, Done)
+    // appear in order with the unbuffered stderr emitted by worker threads.
+    std::setvbuf(stdout, nullptr, _IOLBF, 0);
+
     install_crash_handler();
+    install_termination_handler();
 
     CliOptions opts;
     if (!parse_cli(argc, argv, opts)) return 2;
@@ -719,6 +812,23 @@ int main(int argc, char* argv[]) {
     touch_injector_thread.join();
     if (scripted_keys_thread.joinable()) scripted_keys_thread.join();
     if (duration_thread.joinable()) duration_thread.join();
+
+    // Dump the final LCD framebuffer for integration tests. Written as raw
+    // RGB565 little-endian (240 * 320 * 2 = 153600 bytes). Done after threads
+    // are joined so the firmware can't race a final paint on top of us.
+    if (!opts.fb_dump.empty()) {
+        const uint16_t* fb = portapack::IO::get_framebuffer();
+        if (FILE* f = std::fopen(opts.fb_dump.c_str(), "wb")) {
+            const size_t n = static_cast<size_t>(LCD_WIDTH) * LCD_HEIGHT;
+            const size_t w = std::fwrite(fb, sizeof(uint16_t), n, f);
+            std::fclose(f);
+            std::fprintf(stdout, "[EmuHem] fb-dump: wrote %zu pixels (%zu bytes) to %s\n",
+                         w, w * sizeof(uint16_t), opts.fb_dump.c_str());
+        } else {
+            std::fprintf(stderr, "[EmuHem] fb-dump: failed to open %s for writing\n",
+                         opts.fb_dump.c_str());
+        }
+    }
 
     if (texture) SDL_DestroyTexture(texture);
     if (renderer) SDL_DestroyRenderer(renderer);

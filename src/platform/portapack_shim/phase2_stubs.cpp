@@ -137,6 +137,12 @@ void set_rate(const Rate) {}
 // Radio stubs
 // ============================================================================
 
+// Forward-declared in the global namespace so radio::set_baseband_rate below
+// resolves to ::baseband::dma::set_sample_rate (defined in baseband_dma_emu.cpp)
+// and NOT to ::radio::baseband::dma::set_sample_rate (which would be a new,
+// undefined symbol if the forward-decl were written inside `namespace radio`).
+namespace baseband { namespace dma { void set_sample_rate(uint32_t); } }
+
 namespace radio {
 // Forward tuning state to the active I/Q source (rtl_tcp client forwards as
 // upstream commands; file/noise sources ignore). Bridges live in
@@ -160,8 +166,7 @@ void set_vga_gain(const int_fast8_t) {}
 void set_tx_gain(const int_fast8_t) {}
 void set_baseband_filter_bandwidth_rx(const uint32_t) {}
 void set_baseband_filter_bandwidth_tx(const uint32_t) {}
-namespace baseband::dma { void set_sample_rate(uint32_t); }
-void set_baseband_rate(const uint32_t rate) { baseband::dma::set_sample_rate(rate); }
+void set_baseband_rate(const uint32_t rate) { ::baseband::dma::set_sample_rate(rate); }
 void set_tx_max283x_iq_phase_calibration(const size_t) {}
 void set_rx_max283x_iq_phase_calibration(const size_t) {}
 void disable() {}

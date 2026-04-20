@@ -1,10 +1,10 @@
 # EmuHem Implementation Status
 
-Last updated: 2026-04-20 (Phase 12 — TX path lands: `IQSink` abstraction + `FileIQSink` + `SoapyIQSink`; 18 TX processors now emit real I/Q)
+Last updated: 2026-04-20 (Phase 21 — integration tests validate TX sample emission via `--iq-tx-file`: 5 TX apps now assert non-empty CS8 output, proving the TX pipeline flows end-to-end not just that the UI rendered)
 
 ## Overview
 
-EmuHem compiles ~310 PortaPack Mayhem firmware C++ source files natively on macOS using Clang/C++23, replacing hardware layers with desktop shims. The emulator renders the full Mayhem UI in an SDL3 window with keyboard/mouse navigation and runs a bidirectional baseband pipeline: RX from synthetic noise, `.c8`/`.cu8`/`.cs16`/`.cf32`/`.wav` files, remote `rtl_tcp` servers, or any SoapySDR-supported USB SDR (HackRF, RTL-SDR, Airspy, Lime, Pluto, Blade…); TX out to CS8 files or SoapySDR TX devices. 43 baseband processors (1 spectrum, 3 RX audio, 21 RX digital, 18 TX modulators) resolve through the `image_tag_t` → factory registry.
+EmuHem compiles ~310 PortaPack Mayhem firmware C++ source files natively on macOS using Clang/C++23, replacing hardware layers with desktop shims. The emulator renders the full Mayhem UI in an SDL3 window with keyboard/mouse navigation and runs a bidirectional baseband pipeline: RX from synthetic noise, `.c8`/`.cu8`/`.cs16`/`.cf32`/`.wav` files, remote `rtl_tcp` servers, or any SoapySDR-supported USB SDR (HackRF, RTL-SDR, Airspy, Lime, Pluto, Blade…); TX out to CS8 files or SoapySDR TX devices. 51 baseband processors (1 spectrum, 3 RX audio, 24 RX digital incl. WEFAX/NOAA APT/SSTV RX/Test, 20 TX modulators incl. SSTV TX, plus `capture` and `replay` on the RX/TX boundary) resolve through the `image_tag_t` → factory registry.
 
 ---
 
@@ -64,6 +64,144 @@ Three audio demodulators compile and register. SDL3 audio output stream replaces
   - `tx_empty_buffer()` rotates between two 32-sample staging slots; on each call it pushes the previous slot's contents via `SDL_PutAudioStreamData`, then returns the next slot for the caller to fill. This matches the firmware's pattern where the returned buffer is filled in place before the next call.
   - `disable()` destroys the stream cleanly
 - **`SDL_INIT_AUDIO`** added to `SDL_Init` in `main_emu.cpp`
+
+### Phase 21: validate TX sample emission in integration tests (2026-04-20)
+
+Previously TX-app integration tests only checked "app launched + framebuffer rendered." That caught nothing about whether the TX baseband pipeline actually flowed samples — the `FileIQSink` / `SoapyIQSink` / NullIQSink could all have silently dropped the path and the smoke test wouldn't notice. Phase 21 closes that gap for the 5 apps that emit samples without user interaction.
+
+- **`run_app_test.sh`**: optional third arg `"tx"` enables `--iq-tx-file=$TMP/tx.cs8` and asserts the CS8 file grew to ≥ 64 KiB after the 2-second run (≈ 32 K samples, ≈ 10 ms of TX at 3 MS/s — way below actual expected 6-12 MB, so immune to buffer-truncation-on-shutdown noise).
+- **`tests/integration/CMakeLists.txt`**: new `INTEGRATION_TX_APPS` list (aprstx, touchtune, microphone, replay, rdstx) wires the `tx` mode through. New `INTEGRATION_PASSIVE_TX_APPS` list (bletx, ooktx) keeps those as regular smoke tests with a comment explaining why — both need a user "start TX" button press which the harness doesn't automate yet.
+- **What this catches**: a regression where the processor runs but no buffer ever reaches `IQSink::write()` (e.g. `baseband::dma::wait_for_buffer` returning early, direction flag not latched, sink factory returning wrong type). The old smoke test would pass because the UI still paints; this one fails.
+- **What this doesn't catch** (out of scope — would need per-app golden files or scripted decode): whether the emitted samples are *correct* (right modulation, right frequency, right bits). That's "TX loopback sink" territory (Next Steps #6).
+- **Verified**: 22/23 typical single-run pass (1 TX-shutdown-latency flake as documented since Phase 20, alternating across `touchtune`/`rdstx`/`aprstx`/`bletx`/`ooktx` — the OS-scheduling-bound residual from Phase 20 is unchanged). Each app passes in isolation. Wall time ~160s serial (up from ~72s pre-Phase-21 due to 5× ~12 MB CS8 writes per run — tests disk I/O too).
+
+### Phase 20: eliminate TX-shutdown-latency flake (2026-04-20)
+
+Calling `baseband::shutdown()` from `firmware_thread_fn` after `event_dispatcher.run()` returns so the M4 dispatcher receives a `ShutdownMessage` promptly instead of waiting for static destructors at process exit. Cuts typical TX-app shutdown from ~60s (busy-loop spin-wait in `send_message` → `chDbgPanic` → abort handler → exit) down to ~4s (M4 dispatcher stops, BasebandThread joins cleanly).
+
+**Before Phase 20:**
+- Full sequential suite: ~130s with 1 failure, up to ~330s with 3 failures under heavy load.
+- Individual TX apps (`aprstx`/`bletx`/`ooktx`/`touchtune`/`rdstx`/`replay`): 60+ seconds to exit because nothing sends ShutdownMessage until `~AppView` runs during C++ static-destructor teardown after `main()` returns. Meanwhile the script's `timeout 60` wrapper kills emuhem before it can finish, marking the test as failed.
+
+**After Phase 20:**
+- Full sequential suite: **~72s, 23/23 passing on clean runs.** Occasional 0-1 flake remains under heavy load (typically 1 TX app timing out when two ctest processes run in parallel).
+- Individual TX apps: ~4s wall time, clean ordering `Shutting down... → Firmware thread exiting → M4 event dispatcher exited → Done.`
+
+**Implementation**:
+- [main_emu.cpp::firmware_thread_fn](src/main_emu.cpp): after `event_dispatcher.run()` returns, call `emuhem_shutdown_baseband()` which delegates to firmware's `baseband::shutdown()`.
+- [core_control_emu.cpp](src/platform/portapack_shim/core_control_emu.cpp): added the thin `emuhem_shutdown_baseband()` wrapper with an `extern "C"`-style linkage so `main_emu.cpp` doesn't need to include the firmware's baseband headers.
+- `baseband::shutdown()` is guarded by `baseband_image_running`, so it's a safe no-op for utility apps that never enable a baseband processor (`notepad`/`filemanager`/`freqman`/`iqtrim`).
+
+**Background detail** (in case this ever needs revisiting):
+- The firmware's `baseband::shutdown()` → `send_message(&shutdown_msg)` → writes `shared_memory.baseband_message` and spins until M4 clears it. The already-patched `event_m4.cpp` (CMakeLists.txt Phase 3) has the EmuHem-specific fix that always clears `baseband_message = nullptr` after handling `ID::Shutdown` (firmware source does it only `#ifdef PRALINE`). So the send_message returns promptly once M4 consumes the Shutdown.
+- The M4 event dispatcher's `run()` exits when `request_stop()` is called from `on_message_shutdown`. The spawning lambda in `m4_init` then destructs the `BasebandEventDispatcher`, which destructs the unique_ptr `<BasebandProcessor>`, which destructs `BasebandThread`, which calls `chThdTerminate` + `chThdWait` on the M4 baseband thread. Clean cascade.
+- Phase 16 attempted the same fix via `m4_request_shutdown()` (direct join) and crashed during dyld unwind; this phase uses firmware's own `baseband::shutdown()` message path, which doesn't touch the M4 thread lifecycle directly and avoids the crash.
+
+### Phase 19: fix `rdstx` null-pointer crash (2026-04-20)
+
+Last non-launching built-in app. `RDSProcessor::execute` dereferences `rdsdata[...]` (a `uint32_t*` that's null-initialized in the class body) before `RDSProcessor::on_message` has a chance to populate it from `shared_memory.bb_data.data` via the firmware's first `RDSConfigureMessage`. On target the null deref is silently benign (reset RAM reads as zeros, so `cur_bit` stays 0 and the loop keeps running on the zero-filled sample buffer); on x86/Apple Clang it SIGSEGVs immediately.
+
+- **Fix**: single-line patch added via CMake `file(READ/REPLACE/WRITE)` to `proc_rds.cpp` — inject `if (!configured) return;` at the top of `execute()`, matching the guard pattern that almost every other processor already uses (MicTX, sonde, tpms, etc.).
+- **Integration test**: `rdstx` added to `INTEGRATION_APPS` (now 21 apps). `INTEGRATION_APPS` comment updated: **no built-in apps are excluded anymore** — only the external-`.ppma` apps (SSTV/WEFAX/NOAA APT) from Phase 18 remain uncovered, because they're not dispatchable via `--app=<id>`.
+- **Verified**: 23/23 CTest entries pass in isolation. Under full sequential load, the documented TX-shutdown-latency flake still claims 1-3 TX apps per run (aprstx/touchtune/rdstx/bletx/ooktx/replay all susceptible), each passes in isolation. This condition is unchanged from Phase 16 — not introduced by Phase 19.
+
+### Phase 18: SSTV RX/TX, WEFAX RX, NOAA APT RX, TestProcessor (2026-04-20)
+
+Five more baseband processors land, pushing registry coverage to **51 of ~55**. All five register cleanly via the existing strip macro (one needed a custom patch for a comment-line between `int main() {` and `init_audio_out()`) — no header collisions, no unlinked transitive `.cpp` deps.
+
+- **`SSTVRXProcessor` (`image_tag_sstv_rx`)** — slow-scan TV image RX. `proc_sstvrx.cpp` main() has a `// Initialize audio DMA` comment between the brace and the audio init call, so `emuhem_strip_proc_main`'s standard pattern doesn't match; patched directly via `file(READ/REPLACE/WRITE)` like `proc_sonde.cpp`.
+- **`SSTVTXProcessor` (`image_tag_sstv_tx`)** — SSTV TX. Standard strip, no audio init.
+- **`WeFaxRx` (`image_tag_wefaxrx`)** — weather fax image RX. Standard strip, audio_out init.
+- **`NoaaAptRx` (`image_tag_noaaapt_rx`)** — NOAA APT satellite weather image RX. Same strip pattern as WeFaxRx.
+- **`TestProcessor` (`image_tag_test`)** — dev/diagnostic AIS-test processor (referenced only by a commented-out `testapp` entry in `ui_navigation.cpp`). Registered so the image tag resolves, but not reachable from the UI.
+
+**Caveat — no new integration tests.** All five processors correspond to apps that are either **external** (loaded from SD as `.ppma` plugins, not in `ui_navigation.cpp::appList`) — SSTV RX/TX, WEFAX RX, NOAA APT RX — or to a commented-out stub (`testapp`). `--app=sstvrx` and siblings therefore print `unknown app id` and fall through to the menu; there's nothing EmuHem-side to dispatch. What Phase 18 delivers is the *baseband plumbing* — once external `.ppma` loading lands (out of scope; separate track), these processors are already resident and the image tags resolve through `core_control_emu.cpp`'s registry.
+
+**What's not covered here** (deliberately, would have needed separate scope):
+- Image-rendering hooks: these processors push pixel data via `shared_memory.application_queue`; the M0 consumers (in the external apps) would normally paint into their views. EmuHem doesn't render anything extra for them — the existing UI pipeline handles it whenever/if the external-app viewer reaches the drawing path.
+- `AM TV` (`image_tag_am_tv`): skipped. Its header defines `class WidebandFMAudio` at global scope which would collide with `proc_wfm_audio.hpp`. Same class-name-collision pattern that cost us half a day in Phase 17; not worth the third rename round for a processor whose app isn't in appList either.
+- `proc_bint_stream_tx`, `proc_sigfrx`, `proc_flash_utility`, `proc_sd_over_usb`, `proc_pocsag` (v1): no image tag constant or no file at all — not registerable.
+
+**Verified**: clean build, 22 CTest entries (2 unit + 20 integration), previously green apps still green. No new integration tests (external apps aren't dispatchable from appList). Full-suite sequential run remains subject to the documented TX-shutdown-latency flake on 1-2 of the 5 TX apps per full run; each passes in isolation.
+
+### Phase 17: capture / replay / MicTX processors (2026-04-20)
+
+Three more baseband processors land, closing the last non-launching apps from Phase 15's excluded list. 46 of ~55 total firmware processors are now registered; the integration suite grows from 17 to 20 apps.
+
+- **`capture` (`image_tag_capture`)** — wideband RX recorder (I/Q to SD card). `proc_capture.hpp` defined `class MultiDecimator` and `class NoopDecim` at global scope, colliding with `proc_fsk_rx.hpp`'s same-named classes when both processors live in one TU (EmuHem registry). Renamed to `CaptureMultiDecimator` / `CaptureNoopDecim` via CMake `string(REPLACE)` in the patched `proc_capture.hpp`; `proc_capture.cpp` is also patched to track the `NoopDecim` template-arg reference.
+- **`replay` (`image_tag_replay`)** — I/Q replay TX. Clean strip via the standard macro, no collision. TX shutdown latency is the same as other TX apps (tracked under "Unfinished shims") but in bounds.
+- **`microphone` (`image_tag_mic_tx`, MicTXProcessor)** — audio TX from mic input. Needed an `init_audio_in()` variant of `emuhem_strip_proc_main`, plus two previously-unlinked baseband translation units:
+  - `tone_gen.cpp` — `ToneGen::configure` / `::process` / `::process_beep` are called by `dsp::modulate::FM` for CTCSS/tone-key mix, but the firmware never compiled `tone_gen.cpp` outside a per-proc binary. Apple ld resolved the symbol to 0x0; MicTX's first `AudioTXConfig` message jumped there.
+  - `audio_input.cpp` — `AudioInput::read_audio_buffer` is MicTX's hot path (reads `rx_empty_buffer()`, copies right channel to s16). Same "linker permissive, crash at 0x0" pattern.
+- **Macro extension**: `emuhem_strip_proc_main` now accepts a third-arg value of `IN` (in addition to `TRUE`/`FALSE`) for processors whose `main()` starts with `audio::dma::init_audio_in()`. Cleaner than a fourth macro.
+- **Integration tests**: `tests/integration/CMakeLists.txt::INTEGRATION_APPS` now covers 20 apps (added `microphone`, `replay`, `capture`). Only excluded app is `rdstx` (internal state-machine crash, still pre-existing).
+- **Verified**: 22/22 CTest entries green (2 unit + 20 integration), serial wall time ~69s.
+
+### Phase 16: Integration test harness (2026-04-20)
+
+Per-app smoke tests via CTest that exercise the full `--app=<id>` path on the real `emuhem` binary. Complements Phase 13's utility-level unit suite — catches regressions in the launch path, baseband lifecycle, and UI rendering that Phase 13 can't see.
+
+- **New directory**: `tests/integration/` with `run_app_test.sh`, `CMakeLists.txt`, `README.md`.
+- **Per-app test**: launches `emuhem --headless --duration=2 --app=<id> --fb-dump=<tmp>` and asserts (1) exit 0, (2) no `CRASH`/`PANIC` in stderr, (3) `--app: launched '<id>'` in stderr (Phase 14 dispatch), (4) final framebuffer is not byte-identical to all zeros (rendering happened — deliberately loose, no pixel hashes).
+- **17 apps covered**: all 13 from Phase 15's clean-launch matrix + `notepad`/`filemanager`/`freqman`/`iqtrim` utility apps. `rdstx`/`microphone`/`capture`/`replay` excluded — documented in `tests/integration/README.md`.
+- **Per-test isolation**: each test sets `$EMUHEM_PMEM_FILE` + `$EMUHEM_SDCARD_ROOT` to fresh `mktemp -d` paths so autostart/last-app settings don't leak between tests.
+- **Serialization via `RESOURCE_LOCK "emuhem_headless"`**: multiple concurrent `emuhem` processes contend on SDL/CoreAudio device ownership, causing intermittent hangs. Integration tests are serialized even with `ctest -jN`. Unit tests stay parallel.
+- **`EMUHEM_NO_AUDIO_OUT=1` opt-out**: `baseband_hw_emu.cpp::init_audio_out` skips `SDL_OpenAudioDeviceStream` when set — CoreAudio's default-device handle doesn't always release fast enough between back-to-back emuhem runs, and audio output isn't observable during smoke tests anyway. Test script exports this env.
+- **New CLI flag**: `--fb-dump=PATH` writes the final LCD framebuffer as raw RGB565 (240×320×2 = 153600 bytes) to PATH on shutdown. Enables the liveness assertion; useful for ad-hoc investigations too.
+- **New signal handling (unrelated but necessary for graceful test termination)**: SIGTERM/SIGINT/SIGHUP now set `g_quit_requested` for a clean shutdown path; second signal of the same kind force-exits via the default handler. Previously only crash signals (SIGSEGV/SIGBUS/SIGILL/SIGFPE/SIGABRT) were handled.
+- **Stdout line-buffered via `setvbuf(stdout, nullptr, _IOLBF, 0)`**: shutdown-phase prints (`Shutting down...`, `Done.`, `--duration elapsed`) now interleave correctly with the unbuffered stderr from worker threads when redirected to a log. Essential for diagnosing test flake.
+- **Verified**: 19/19 CTest entries passing (2 unit + 17 integration). Serial run ~60s.
+
+### Phase 15: RX/TX apps reach baseband without panicking (2026-04-20)
+
+Phase 14's `--app=<id>` flag exposed three unrelated, pre-existing bugs on the "real baseband send" path. All three are now fixed. Before Phase 15: `audio`, `pocsag`, `aprsrx` crashed on launch with `PANIC: Baseband Send Fail`. After Phase 15: every RX app and most TX apps reach their view with a running baseband processor.
+
+**Root causes (three distinct bugs all triggered by the same code path):**
+
+1. **M4 processor-switch race in `core_control_emu.cpp::m4_init`** — the shim spawned the new M4 event thread but returned immediately, relying on the firmware's `shared_memory.baseband_ready` spin-wait to synchronize. Under macOS thread scheduling this sometimes allowed the M0 to send a baseband message before the new M4 dispatcher installed `g_m4_event_thread`. Signal went nowhere; message spun to `chDbgPanic`. Also, `shutdown_m4_thread` left `shared_memory.baseband_message` pointing at the stale `shutdown_msg`, which the next dispatcher could dequeue and shut itself down. Fix: proper mutex + condition-variable rendezvous that blocks `m4_init` until the new dispatcher is constructed AND listening, plus explicit clearing of `baseband_message`/`baseband_ready` on shutdown.
+2. **`dsp_squelch.cpp` was never compiled** — the top-level `CMakeLists.txt` Phase 3.5 list added `audio_output.cpp` + `audio_compressor.cpp` but not `dsp_squelch.cpp`, so `FMSquelch::set_threshold(float)` was an unresolved symbol. Apple's linker permitted it (same failure mode as Phase 14's `radio::set_baseband_rate`). At runtime, `NarrowbandFMAudio::configure` → `AudioOutput::configure` → jump to 0x0. Fix: added to the baseband source list.
+3. **`ff_emu.cpp::f_getfree` wrote `*fatfs = nullptr`** — the firmware's `std::filesystem::space(path)` dereferences the returned `FATFS*` to compute `fs->csize * _MIN_SS` for cluster size. With nullptr it crashed inside every `RecordView::update_status_display` (called from every app that embeds a record button). Fix: back `*fatfs` with a process-wide static `FATFS{csize=1, n_fatent=total_clusters+2}` filled from POSIX `statvfs`.
+
+**Apps now launching cleanly that did not before Phase 15:**
+- RX: `audio` (AM/NFM/WFM), `pocsag`, `aprsrx`
+- TX: `aprstx`, `bletx`, `ooktx`, `touchtune`
+- Plus stability for every other app on the processor-switch path (first baseband::send_message no longer races).
+
+**Apps still failing (different root causes, not Phase 15 scope):**
+- `rdstx` — crashes inside `RDSProcessor::execute` itself (TX-processor-internal state machine issue, not the baseband lifecycle).
+- `microphone` (MicTX) — needs an `init_audio_in()` variant in the `emuhem_strip_proc_main` macro; the processor isn't registered.
+- `capture`, `replay` — processors not registered (`proc_capture`/`proc_replay` not yet ported).
+
+**Verified regression-free**: CTest still 87/87 passing; 13-of-15 app-launch matrix clean; `./emuhem` with no flags behaves identically.
+
+### Phase 14: `--app=<id>` direct-launch flag (2026-04-20)
+
+Shortens the path from `./emuhem` to any firmware app. Previously every app required menu navigation via `--keys=` (D-pad taps, sleeps, pray the splash gets out of the way). Now scripted tests and ad-hoc investigations can target one app directly.
+
+- **CLI flag**: `--app=<id>`. Sets `EMUHEM_APP` env var (mirrors the rest of the CLI → env pattern).
+- **Dispatch**: `firmware_thread_fn` calls `system_view.get_navigation_view()->StartAppByName(app_name)` after nav is constructed, immediately before `event_dispatcher.run()`. Uses the firmware's own id table (`NavigationView::appList` in `ui_navigation.cpp`) — no parallel registry in EmuHem.
+- **Supported ids**: every `appList` entry with a non-null `id` field. ~40 apps including `audio`, `adsbrx`, `ais`, `pocsag`, `aprsrx`, `weather`, `search`, `lookingglass` (wide spectrum), `recon`, `capture`, `replay`, `aprstx`, `bletx`, `ooktx`, `rdstx`, `microphone`, `filemanager`, `freqman`, `iqtrim`, `notepad`. Unknown ids log an error and fall through to the main menu.
+- **Bug fix (unrelated but on-path)**: `phase2_stubs.cpp` forward-declared `baseband::dma::set_sample_rate` *inside* `namespace radio`, making the call inside `radio::set_baseband_rate` resolve to the nonexistent `::radio::baseband::dma::set_sample_rate`. The linker left it as an undefined symbol (Apple's linker is permissive), so at runtime calls crashed with PC=0x0. Never triggered by menu-only navigation; exposed the moment `--app=audio` reached `ReceiverModel::enable()`. Fix: forward-declare at the global scope.
+- **Verified (pass)**: `--app=notepad`, `filemanager`, `freqman`, `iqtrim`, `adsbrx`, `ais`, `weather`, `search` all launch cleanly.
+- **Verified (crash — pre-existing baseband shim limitation, not Phase 14 scope)**: `--app=audio`, `pocsag`, `aprsrx` reach the first baseband message send and time out with `PANIC: Baseband Send Fail`. The M4 event dispatcher's handling of processor-switch lifecycle drops messages in some window; menu-driven startup avoids this by never switching away from the initial WidebandSpectrum processor until baseband is fully settled. Tracked separately under "Unfinished shims".
+- **Regressions**: none — `./emuhem` without `--app` behaves identically to Phase 13.
+
+### Phase 13: CTest Unit Test Suite (2026-04-20)
+
+EmuHem now has a native unit test suite wired into CMake via CTest. Ports the upstream firmware doctest suite at `mayhem-firmware/firmware/test/` to run against the firmware TUs EmuHem compiles — catches regressions in `file.cpp`, `freqman_db.cpp`, `string_format.cpp`, `utility.cpp`, `dsp_fft.cpp`, and friends whenever EmuHem's build is rebuilt or firmware is re-synced.
+
+- **Framework: doctest** (reused from upstream, `mayhem-firmware/firmware/test/include/doctest.h`). No googletest/Catch2 fetch.
+- **Two test binaries** mirroring upstream's split:
+  - `emuhem_tests_application` — 10 test files from `firmware/test/application/` (basics, circular_buffer, convert, optional, string_format, utility, mock_file, file_reader, file_wrapper, freqman_db). **84 passing test cases, 461 passing assertions.**
+  - `emuhem_tests_baseband` — `dsp_fft_test.cpp`. Explicitly adds `firmware/common/dsp_fft.cpp` (filtered out of EmuHem's main build by the baseband-only regex). **3 passing test cases, 48 passing assertions.**
+- **Test sources NOT copied** — referenced in place from `mayhem-firmware/firmware/test/`. Matches how EmuHem consumes the rest of the firmware tree; upstream test updates flow through on rebuild.
+- **New directory**: `tests/` containing `CMakeLists.txt`, `linker_stubs.cpp` (ported from upstream + `f_utime` / `freqman_dir` additions), and `README.md`.
+- **Test targets are isolated**: no SDL3, no ChibiOS shim, no `main_emu.cpp` — pure-logic only. Rebuilds faster than the main binary.
+- **Skipped test cases: 1** — `"It can parse frequency step"` in `test_freqman_db.cpp` hardcodes enum ordinal positions that drifted in upstream firmware. Excluded via doctest's `--test-case-exclude=` flag at the CTest layer. Not an EmuHem porting issue.
+- **Patches applied**: (a) `std::std::abs` typo in `tone_key.cpp` via CMake `file(READ/REPLACE/WRITE)`; (b) `-ULPC43XX_M0` on the baseband target (EmuHem's main build is M0-flavored, baseband tests target M4 code paths); (c) `-include lpc43xx_cpp.hpp` on the baseband target so `dsp_fft.hpp`'s `__RBIT` intrinsic is defined.
+- **Run**: `ctest --test-dir build --output-on-failure`.
+- **Per-test status tracking**: `docs/tests_status.md` — one row per test file, reason-for-skip per skipped case, list of emulator features that would unblock any future skipped tests (currently: none pending).
+- **Verified**: 87/87 runnable test cases pass, 509/509 runnable assertions pass, 0 failing. `emuhem` binary still builds and runs clean (regression).
 
 ### Phase 12: TX Path — `IQSink` abstraction (2026-04-20)
 
@@ -397,7 +535,7 @@ cmake --build build -j8
 
 ## Registered Baseband Processors
 
-**43 of ~55 image tags resolve.** TX processors emit real I/Q since Phase 12 (`IQSink`).
+**51 of ~55 image tags resolve.** TX processors emit real I/Q since Phase 12 (`IQSink`).
 
 | Phase | Tag | Class | Type |
 |-------|-----|-------|------|
@@ -444,8 +582,16 @@ cmake --build build -j8
 | 11 | `PATX` | `AudioTXProcessor` | TX modulator |
 | 11 | `PTSK` | `TimeSinkProcessor` | TX modulator |
 | 11 | `PEPT` | `EPIRBTXProcessor` | TX modulator |
+| 17 | `PCAP` | `CaptureProcessor` | RX record |
+| 17 | `PREP` | `ReplayProcessor` | TX replay |
+| 17 | `PMTX` | `MicTXProcessor` | TX modulator |
+| 18 | `PSRX` | `SSTVRXProcessor` | RX digital (image) |
+| 18 | `PSTX` | `SSTVTXProcessor` | TX modulator (image) |
+| 18 | `PWFX` | `WeFaxRx` | RX digital (image) |
+| 18 | `PNOA` | `NoaaAptRx` | RX digital (image) |
+| 18 | `PTST` | `TestProcessor` | RX digital (diagnostic) |
 
-Tallies: 1 spectrum, 3 RX audio, 21 RX digital, 18 TX modulators = **43 registered**. Remaining (~12): SSTV RX/TX, WEFAX RX, NOAA APT RX, capture/replay, AM TV, MicTX, BintStreamTX, test, SigFRX, flash_utility, sd_over_usb, OOK stream TX, POCSAG v1.
+Tallies: 1 spectrum, 3 RX audio, 24 RX digital (incl. WEFAX/NOAA APT/SSTV RX/Test from Phase 18), 20 TX modulators (incl. SSTV TX from Phase 18), `capture` + `replay` + MicTX = **51 registered**. Remaining (~4): AM TV, BintStreamTX, SigFRX, flash_utility, sd_over_usb, OOK stream TX, POCSAG v1.
 
 ---
 
@@ -481,24 +627,42 @@ Tallies: 1 spectrum, 3 RX audio, 21 RX digital, 18 TX modulators = **43 register
 
 ## What Doesn't Work Yet
 
-Infrastructure is solid and most named Mayhem apps (spectrum, audio demodulators, and the 21 RX decoders / 18 TX modulators covered by the registry) now reach baseband. Remaining gaps grouped by rough effort.
+Infrastructure is solid and most named Mayhem apps (spectrum, audio demodulators, 21 RX decoders, 19 TX modulators, plus capture/replay/microphone) now reach baseband. Remaining gaps grouped by rough effort.
 
-### Small / near-term
+### Missing Features Summary
 
-- **Windows port**: rtl_tcp client + server and SD passthrough use POSIX-only headers (`<sys/socket.h>`, `<netdb.h>`, `<fcntl.h>`, `<sys/statvfs.h>`, `<fnmatch.h>`). Need Winsock2 + Win32 filesystem wrappers and a Windows CI build.
-- **`--app=<name>` flag**: launch a firmware app by name, bypassing menu navigation. Requires introspecting the app registry + synthesizing a `NavigationView::push_<T>()` call from main.
-- **Automated test harness**: `--headless --keys=...` enables scripted runs, but no scenarios are written yet — no per-app smoke tests, no framebuffer-hash regression suite, no CI integration.
-- **Crash artifacts**: signal handler prints a backtrace to stderr but doesn't write a crash dump file to disk.
+At-a-glance list of everything not yet implemented, roughly by impact:
 
-### Baseband processors — ~12 of 55 still uncompiled
+| # | Gap | Severity | Effort |
+|---|-----|----------|--------|
+| 1 | **Windows port** — POSIX-only syscalls in rtl_tcp client/server + SD passthrough | High (blocks Windows users) | Medium |
+| 2 | **External `.ppma` app loading** — SSTV/WEFAX/NOAA APT baseband is registered but their UI apps live on-SD as plugins | High (weather/imaging ecosystem blocked) | High |
+| 3 | **Remaining 6 baseband processors** — AM TV, SigFRX, BintStreamTX, OOK stream TX, flash_utility, sd_over_usb | Low (each niche) | Low–Medium per-proc |
+| 4 | **TX loopback sink** — TX→RX round-trip test (generate RDS, decode back, assert bits) | Medium (unlocks regression coverage) | Medium |
+| 5 | **Deeper integration tests** — scripted `--keys` flows, per-app framebuffer golden regions, rtl_tcp round-trip tests | Medium | Medium |
+| 6 | **USB serial shell** — firmware CLI/debug shell unreachable; `usb_serial_device_to_host.h` is a stub | Medium | Medium |
+| 7 | **Crash dump file** — signal handler prints backtrace to stderr but doesn't write a JSON crash artifact | Low | Low |
+| 8 | **`radio::enable/disable_rf_output`** — currently no-op; sink is always live when processor runs | Low | Low |
+| 9 | **WAV/CS16/CF32 output formats** on `FileIQSink` — only CS8 today | Low | Low |
+| 10 | **Peripheral sensors** (battery/temp/I²C/antenna bias) return constants | Low (rarely used) | Low |
+| 11 | **CPLD upload** + **debug screen data sources** return zeros | Low | Low |
+| 12 | **Audio controls** — volume/mute round-trip to `SDL_AudioStream` gain/pause not verified | Low | Low |
+| 13 | **Input fidelity** — mouse wheel = one-tick-per-notch encoder; no acceleration | Low | Low |
+| 14 | **TX-shutdown flake** under heavy load — 1 TX app per full serial run occasionally misses its `timeout 60` budget; each passes in isolation | Low (cosmetic) | Uncertain |
+| 15 | **Font rendering on bezel** — no labels, clock, or signal-strength indicator | Cosmetic | Medium |
+| 16 | **Higher-DPI "H2M" variant** — 240×320 LCD only | Cosmetic | Medium |
+| 17 | **GCC/MSVC support** — Clang-only builds tested | Cosmetic | Low |
+| 18 | **rtl_tcp-as-TX-client** — non-standard rtl_tcp mode, low priority | Niche | Medium |
+| 19 | **Per-direction TX gain hook** — `on_tx_gain_changed` reuses RX `tuner_gain` bridge | Niche | Low |
 
-43 processors resolve; see the Registered Baseband Processors table above for the full list. Still absent:
+### Baseband processors — 6 of ~55 still uncompiled
 
-- **RX**: SSTV RX, WEFAX RX, NOAA APT RX, SigFRX, AM TV.
-- **TX**: SSTV TX, BintStreamTX, MicTX (needs `init_audio_in()` variant in the macro), OOK stream TX.
-- **Capture / replay**: `proc_capture`, `proc_replay` (need SD-card integration polish + `MultiDecimator` rename — same collision pattern as Phase 10's FSK_RX fix).
-- **Utility**: `proc_test`, `proc_flash_utility`, `proc_sd_over_usb`.
-- **Superseded**: `proc_pocsag` (v1, replaced by `PPO2`).
+51 processors resolve; see the Registered Baseband Processors table above for the full list. Still absent:
+
+- **RX**: SigFRX, AM TV (header class-name collision with `proc_wfm_audio.hpp::WidebandFMAudio`).
+- **TX**: BintStreamTX (no `image_tag_*` constant), OOK stream TX (no baseband `.cpp`).
+- **Utility**: `proc_flash_utility`, `proc_sd_over_usb`.
+- **Superseded** (won't be added): `proc_pocsag` (v1, replaced by `PPO2`).
 
 Each new processor needs: the `.cpp` patched via `emuhem_strip_proc_main` (see CMakeLists.txt Phase 10 macro), support `.cpp` files added to CMake (baseband/ must be explicit; common/ is globbed), registered in `core_control_emu.cpp`. Watch for: PRALINE-pattern headers, 64-bit `unsigned long` assumptions, `constexpr size_t` at function scope that reads static class members, and global-scope class-name collisions like `MultiDecimator` / `EccContainer` (wrap the duplicate in `#if 0` via CMake patching).
 
@@ -520,12 +684,14 @@ The core TX path shipped in Phase 12 — direction-aware `baseband::dma`, `IQSin
 - **Decorative only**: the bezel D-pad dots don't receive clicks; no status LEDs driven from firmware state.
 - **Input fidelity**: mouse wheel → encoder is coarse one-tick-per-notch; no acceleration or physical-feel tuning.
 - **Audio controls**: volume / mute UI changes reach persistent memory but round-trip to `SDL_AudioStream` gain/pause is not verified.
+- **Crash artifacts**: signal handler prints a backtrace to stderr but doesn't write a crash dump file to disk.
 
 ### Polish
 
 - No font rendering on the bezel (no labels, no clock, no signal-strength indicator).
 - 240×320 LCD only — no higher-DPI "H2M" PortaPack variant.
 - Clang-only build; GCC/MSVC untested.
+- **Windows port**: rtl_tcp client + server and SD passthrough use POSIX-only headers (`<sys/socket.h>`, `<netdb.h>`, `<fcntl.h>`, `<sys/statvfs.h>`, `<fnmatch.h>`). Need Winsock2 + Win32 filesystem wrappers and a Windows CI build.
 
 ---
 
@@ -533,8 +699,10 @@ The core TX path shipped in Phase 12 — direction-aware `baseband::dma`, `IQSin
 
 Pick the highest-leverage track for the intended use case:
 
-1. **Remaining ~12 processors** (most user-visible): capture/replay is the biggest single unlock (enables I/Q recording from inside the UI). SSTV/WEFAX/NOAA APT RX need image-rendering hooks wired to `baseband_hw_emu.cpp`. MicTX needs an `init_audio_in()` variant in the `emuhem_strip_proc_main` macro.
+1. **External `.ppma` app loading** (unlocks the image-RX ecosystem): SSTV RX/TX, WEFAX RX, and NOAA APT RX are registered baseband-side (Phase 18) but their UI apps live on-SD as `.ppma` plugins. Firmware already has a loader (`ExternalAppView`); EmuHem needs a parallel loader that resolves the dynamic-link-style symbols. Biggest user-visible unlock for weather/imaging operators.
 2. **Windows port** (broadens audience): thin Winsock2 + Win32 FS wrappers behind the existing POSIX call sites (`<sys/socket.h>`, `<netdb.h>`, `<fcntl.h>`, `<sys/statvfs.h>`, `<fnmatch.h>`).
-3. **`--app=<name>` launch flag** (cheap, unblocks #4): bypass menu navigation for automated testing.
-4. **Test harness** (keeps everything from rotting): write per-app scripted `--keys` scenarios with framebuffer hash assertions; wire into CI. Especially valuable for the 21 RX decoders now that they decode real captures.
-5. **TX loopback sink**: completes the end-to-end TX → decoder test story (generate RDS, decode it back; generate AFSK, decode it back — regression tests for the modulator/demodulator pair).
+3. **Remaining 6 processors**: AM TV (needs class-name-collision rename with `proc_wfm_audio`), SigFRX, BintStreamTX (needs `image_tag_*` constant), OOK stream TX (no baseband `.cpp`), `flash_utility`, `sd_over_usb` — all niche.
+4. **TX loopback sink**: completes the end-to-end TX → decoder test story (generate RDS, decode it back; generate AFSK, decode it back — regression tests for the modulator/demodulator pair).
+5. **Deeper integration tests**: extend beyond the smoke-test baseline — scripted `--keys` flows exercising each RX decoder on a known capture, framebuffer diff against per-app golden regions (not full-hash), rtl_tcp client/server round-trip tests. The harness and `--fb-dump` plumbing is in place; what's missing is per-app golden data and scenario scripts.
+6. **USB serial shell**: wire `usb_serial_device_to_host.h` to a real PTY or TCP port so the firmware's debug shell becomes reachable from the host.
+7. **Crash dump file**: currently the signal handler prints a backtrace to stderr only. Writing a JSON crash artifact (framebuffer + state + backtrace) to `~/.emuhem/crashes/` would be useful for LLM-assisted bug triage.

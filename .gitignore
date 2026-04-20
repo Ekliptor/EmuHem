@@ -32,6 +32,7 @@
 cmake-build-*/
 build/
 *.iml
+.claude/scheduled_tasks.lock
 
 # CMake
 CMakeLists.txt.user
